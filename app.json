@@ -1,0 +1,15 @@
+{
+    "id": "c9c33437-8979-4b2c-ae6b-d0eb55d00a74",
+    "version": "1.0.0",
+    "requiredApiVersion": "^1.1.1",
+    "iconFile": "icon.png",
+    "author": {
+        "name": "Bradley Hilton",
+        "homepage": "https://rocket.chat",
+        "support": "https://github.com/RocketChat/statuscentral/issues"
+    },
+    "name": "RC Status",
+    "nameSlug": "rc-status",
+    "classFile": "RcStatusApp.ts",
+    "description": "The App which controls Rocket.Chat's Status Page."
+}
