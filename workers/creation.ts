@@ -16,10 +16,13 @@ export class IncidentCreationWorker {
 
     public async start(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
         const assoc = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, context.getSender().id);
-        const existing = await read.getPersistenceReader().readByAssociation(assoc);
+        const assoc2 = new RocketChatAssociationRecord(RocketChatAssociationModel.ROOM, context.getRoom().id);
+        const existing = await read.getPersistenceReader().readByAssociations([assoc, assoc2]);
 
         if (existing.length > 0) {
-            const msg = modify.getCreator().startMessage().setUsernameAlias('RC Status')
+            const msg = modify.getCreator().startMessage()
+                .setUsernameAlias('RC Status')
+                .setRoom(context.getRoom())
                 .setText('You are already creating an incident. Please abort if you wish to start over.');
 
             await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
@@ -34,7 +37,7 @@ export class IncidentCreationWorker {
             title,
         };
 
-        await persis.createWithAssociation(data, assoc);
+        await persis.createWithAssociations(data, [assoc, assoc2]);
 
         const services = await this.app.getHttpWorker().retrieveServices(read, http);
 
@@ -49,20 +52,25 @@ export class IncidentCreationWorker {
             actions: [],
         };
 
+        const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
         services.forEach((s) => {
             if (!attach || !attach.actions) {
                 return;
             }
 
             const act: IMessageAction = {
+                type: 'button',
+                text: s.name,
                 msg: s.name,
-                msg_in_chat_window: true,
+                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/service?userId=${ assoc.getID() }&roomId=${ assoc2.getID() }&service=${ s.name }`,
             };
 
             attach.actions.push(act);
         });
 
         mb.addAttachment(attach);
+
+        this.app.getLogger().log(mb.getMessage());
 
         await modify.getCreator().finish(mb);
 

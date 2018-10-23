@@ -1,7 +1,7 @@
 import { IncidenStatusEnum } from './../enums/incidentStatus';
 
 export interface IIncidentUpdateModel {
-    id: string;
+    id: number;
     time: Date;
     status: IncidenStatusEnum;
     message: string;

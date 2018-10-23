@@ -1,6 +1,7 @@
 import { IncidentCommand } from './commands/IncidentCommand';
 import { SettingsEnum } from './enums/settings';
 import { SettingToHttpHeader } from './handlers/settingToHttpHeader';
+import { IncidentAbortWorker } from './workers/abort';
 import { IncidentCreationWorker } from './workers/creation';
 import { HttpWorker } from './workers/http';
 
@@ -12,18 +13,22 @@ import {
     ILogger,
     IRead,
 } from '@rocket.chat/apps-engine/definition/accessors';
+import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
 import { App } from '@rocket.chat/apps-engine/definition/App';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISetting, SettingType } from '@rocket.chat/apps-engine/definition/settings';
+import { ServiceSelectionApi } from './api/service';
 
 export class RcStatusApp extends App {
     private hw: HttpWorker;
+    private iaw: IncidentAbortWorker;
     private icw: IncidentCreationWorker;
 
     constructor(info: IAppInfo, logger: ILogger) {
         super(info, logger);
 
         this.hw = new HttpWorker();
+        this.iaw = new IncidentAbortWorker();
         this.icw = new IncidentCreationWorker(this);
     }
 
@@ -61,6 +66,14 @@ export class RcStatusApp extends App {
         });
 
         await configurationExtend.http.providePreRequestHandler(new SettingToHttpHeader());
+
+        await configurationExtend.api.provideApi({
+            visibility: ApiVisibility.PUBLIC,
+            security: ApiSecurity.UNSECURE,
+            endpoints: [
+                new ServiceSelectionApi(this),
+            ],
+        });
     }
 
     public async onSettingUpdated(setting: ISetting, cm: IConfigurationModify, read: IRead, http: IHttp): Promise<void> {
@@ -69,6 +82,10 @@ export class RcStatusApp extends App {
                 await this.handleApiKeySettingHandle(setting, cm, read, http);
                 break;
         }
+    }
+
+    public getAbortWorker(): IncidentAbortWorker {
+        return this.iaw;
     }
 
     public getCreationWorker(): IncidentCreationWorker {

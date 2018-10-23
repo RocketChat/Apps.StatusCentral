@@ -20,7 +20,7 @@ export class IncidentCommand implements ISlashCommand {
             case 0:
                 return this.handleNoArguments(context, modify);
             case 1:
-                return this.handleOneArgument(context, modify);
+                return this.handleOneArgument(context, read, modify, http, persis);
             case 2:
                 return this.handleTwoArguments(context, read, modify, http, persis);
             default:
@@ -37,7 +37,7 @@ export class IncidentCommand implements ISlashCommand {
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
     }
 
-    private async handleOneArgument(context: SlashCommandContext, modify: IModify): Promise<void> {
+    private async handleOneArgument(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
         let msg: IMessageBuilder;
 
         switch (context.getArguments()[0].toLowerCase()) {
@@ -51,8 +51,7 @@ export class IncidentCommand implements ISlashCommand {
                 msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident remove <id of incident>`');
                 break;
             case 'abort':
-                // TODO: Implement the aborting of a new incident
-                return;
+                return this.app.getAbortWorker().abort(context, read, modify, http, persis);
             default:
                 return this.handleNoArguments(context, modify);
         }
@@ -73,7 +72,7 @@ export class IncidentCommand implements ISlashCommand {
                 this.app.getLogger().log(context.getArguments().join(' '));
                 break;
             case 'abort':
-                return this.handleOneArgument(context, modify);
+                return this.handleOneArgument(context, read, modify, http, persis);
             default:
                 return this.handleNoArguments(context, modify);
         }
@@ -84,7 +83,7 @@ export class IncidentCommand implements ISlashCommand {
             case 'create':
                 return this.app.getCreationWorker().start(context, read, modify, http, persis);
             case 'abort':
-                return this.handleOneArgument(context, modify);
+                return this.handleOneArgument(context, read, modify, http, persis);
             default:
                 return this.handleNoArguments(context, modify);
         }

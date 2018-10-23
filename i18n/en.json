@@ -3,6 +3,6 @@
     "Server_Url_Description": "The endpoint of where the site lives, without `https` or `/`s as those are implied.",
     "Api_Key": "API Key",
     "Api_Key_Description": "The API Key which is valid for the status server.",
-    "Incident_Command_Params_Example": "<create|update|remove>",
+    "Incident_Command_Params_Example": "<create|update|remove|abort>",
     "Incident_Command_Description": "creates new incidents in the Rocket.Chat status"
 }
