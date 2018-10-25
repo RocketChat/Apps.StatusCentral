@@ -1,3 +1,5 @@
+import { ProcessStepperApi } from './api/process';
+import { ServiceSelectionApi } from './api/service';
 import { IncidentCommand } from './commands/IncidentCommand';
 import { SettingsEnum } from './enums/settings';
 import { SettingToHttpHeader } from './handlers/settingToHttpHeader';
@@ -17,7 +19,6 @@ import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/
 import { App } from '@rocket.chat/apps-engine/definition/App';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISetting, SettingType } from '@rocket.chat/apps-engine/definition/settings';
-import { ServiceSelectionApi } from './api/service';
 
 export class RcStatusApp extends App {
     private hw: HttpWorker;
@@ -72,6 +73,7 @@ export class RcStatusApp extends App {
             security: ApiSecurity.UNSECURE,
             endpoints: [
                 new ServiceSelectionApi(this),
+                new ProcessStepperApi(this),
             ],
         });
     }

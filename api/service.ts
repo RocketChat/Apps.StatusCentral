@@ -1,6 +1,6 @@
-import { IIncidentModel } from '../models/incident';
 import { IServiceModel } from '../models/service';
 import { RcStatusApp } from '../RcStatusApp';
+import { IContainer } from './../models/container';
 
 import { HttpStatusCode, IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
@@ -22,17 +22,17 @@ export class ServiceSelectionApi extends ApiEndpoint {
         const existing = await read.getPersistenceReader().readByAssociations([userAssoc, roomAssoc]);
 
         if (existing.length === 1 && request.query.service) {
-            const record = existing[0] as Partial<IIncidentModel>;
+            const record = existing[0] as IContainer;
 
-            if (!record.services) {
-                record.services = [];
+            if (!record.data.services) {
+                record.data.services = [];
             }
 
             const service: Partial<IServiceModel> = { name: request.query.service };
-            const found = record.services.find((s) => s.name === service.name);
+            const found = record.data.services.find((s) => s.name === service.name);
 
             if (!found) {
-                record.services.push(service);
+                record.data.services.push(service);
             }
 
             await persis.removeByAssociations([userAssoc, roomAssoc]);

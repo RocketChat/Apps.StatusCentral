@@ -1,3 +1,4 @@
+import { IContainer } from './../models/container';
 import { IIncidentModel } from './../models/incident';
 import { RcStatusApp } from './../RcStatusApp';
 import { UserUtility } from './../utils/users';
@@ -6,6 +7,7 @@ import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/de
 import { IMessageAction, IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages';
 import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
 import { SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
+import { StepEnum } from '../enums/step';
 
 export class IncidentCreationWorker {
     private app: RcStatusApp;
@@ -15,9 +17,9 @@ export class IncidentCreationWorker {
     }
 
     public async start(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
-        const assoc = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, context.getSender().id);
-        const assoc2 = new RocketChatAssociationRecord(RocketChatAssociationModel.ROOM, context.getRoom().id);
-        const existing = await read.getPersistenceReader().readByAssociations([assoc, assoc2]);
+        const userAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, context.getSender().id);
+        const roomAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.ROOM, context.getRoom().id);
+        const existing = await read.getPersistenceReader().readByAssociations([userAssoc, roomAssoc]);
 
         if (existing.length > 0) {
             const msg = modify.getCreator().startMessage()
@@ -32,12 +34,17 @@ export class IncidentCreationWorker {
         const title = context.getArguments().slice(1, context.getArguments().length).join(' ');
         this.app.getLogger().log(`Starting incident creation of: ${ title }`);
 
-        const data: Partial<IIncidentModel> = {
-            time: new Date(),
-            title,
+        const container: IContainer = {
+            step: StepEnum.Creation,
+            userId: userAssoc.getID(),
+            roomId: roomAssoc.getID(),
+            data: {
+                time: new Date(),
+                title,
+            },
         };
 
-        await persis.createWithAssociations(data, [assoc, assoc2]);
+        await persis.createWithAssociations(container, [userAssoc, roomAssoc]);
 
         const services = await this.app.getHttpWorker().retrieveServices(read, http);
 
@@ -47,28 +54,39 @@ export class IncidentCreationWorker {
                     .setSender(await UserUtility.getRocketCatUser(read))
                     .setUsernameAlias('RC Status');
 
+        // Attachment for the services
         const attach: IMessageAttachment = {
             color: '#fe117a',
             actions: [],
         };
 
+        const params = `?userId=${ userAssoc.getID() }&roomId=${ roomAssoc.getID() }`;
         const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
         services.forEach((s) => {
             if (!attach || !attach.actions) {
                 return;
             }
 
-            const act: IMessageAction = {
+            attach.actions.push({
                 type: 'button',
                 text: s.name,
-                msg: s.name,
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/service?userId=${ assoc.getID() }&roomId=${ assoc2.getID() }&service=${ s.name }`,
-            };
-
-            attach.actions.push(act);
+                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/service${ params }&service=${ s.name }`,
+            });
         });
 
         mb.addAttachment(attach);
+
+        // Attachment for the finish button
+        const finishAttach: IMessageAttachment = {
+            color: '#551a8b',
+            actions: [{
+                type: 'button',
+                text: 'Next Step',
+                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Status }`,
+            }],
+        };
+
+        mb.addAttachment(finishAttach);
 
         this.app.getLogger().log(mb.getMessage());
 
