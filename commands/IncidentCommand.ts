@@ -81,7 +81,7 @@ export class IncidentCommand implements ISlashCommand {
     private async handleEverythingElse(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
-                return this.app.getCreationWorker().start(context, read, modify, http, persis);
+                return this.app.getCreationWorker().start(context, read, modify, persis);
             case 'abort':
                 return this.handleOneArgument(context, read, modify, http, persis);
             default:

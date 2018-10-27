@@ -1,8 +1,8 @@
 export enum IncidenStatusEnum {
-    Investigating = 'investigating',
-    Identified = 'identified',
-    Update = 'update',
-    Monitoring = 'monitoring',
-    Resolved = 'resolved',
-    Default = 'default',
+    Investigating = 'Investigating',
+    Identified = 'Identified',
+    Update = 'Update',
+    Monitoring = 'Monitoring',
+    Resolved = 'Resolved',
+    Default = 'Default',
 }

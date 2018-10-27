@@ -1,5 +1,7 @@
+import { IncidentStatusApi } from './api/incident';
 import { ProcessStepperApi } from './api/process';
 import { ServiceSelectionApi } from './api/service';
+import { StatusSelectionApi } from './api/status';
 import { IncidentCommand } from './commands/IncidentCommand';
 import { SettingsEnum } from './enums/settings';
 import { SettingToHttpHeader } from './handlers/settingToHttpHeader';
@@ -72,8 +74,10 @@ export class RcStatusApp extends App {
             visibility: ApiVisibility.PUBLIC,
             security: ApiSecurity.UNSECURE,
             endpoints: [
-                new ServiceSelectionApi(this),
                 new ProcessStepperApi(this),
+                new IncidentStatusApi(this),
+                new ServiceSelectionApi(this),
+                new StatusSelectionApi(this),
             ],
         });
     }

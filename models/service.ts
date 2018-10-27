@@ -1,7 +1,9 @@
+import { ServiceStatusEnum } from './../enums/serviceStatus';
+
 export interface IServiceModel {
     id: number;
     name: string;
-    status: string;
+    status: ServiceStatusEnum;
     description: string;
     group: string;
     link: string;

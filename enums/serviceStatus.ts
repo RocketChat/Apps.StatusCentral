@@ -1,8 +1,8 @@
 export enum ServiceStatusEnum {
-    ServiceStatusOperational = 'Operational',
-    ServiceStatusDegraded = 'Degraded',
-    ServiceStatusPartialOutage = 'Partial-outage',
-    ServiceStatusOutage = 'Outage',
-    ServiceStatusScheduledMaintenance = 'Scheduled Maintenance',
-    ServiceStatusUnknown = 'Unknown',
+    Operational = 'Operational',
+    Degraded = 'Degraded',
+    PartialOutage = 'Partial-outage',
+    Outage = 'Outage',
+    ScheduledMaintenance = 'Scheduled Maintenance',
+    Unknown = 'Unknown',
 }

@@ -1,20 +1,21 @@
-import { ServiceStatusEnum } from '../enums/serviceStatus';
 import { RcStatusApp } from '../RcStatusApp';
-import { RoomUtility } from '../utils/rooms';
-import { UserUtility } from '../utils/users';
+import { ApiResponseUtilities } from '../utils/apiResponses';
 import { StepEnum } from './../enums/step';
 import { IContainer } from './../models/container';
 
-import { HttpStatusCode, IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
+import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { IApiRequest, IApiResponse } from '@rocket.chat/apps-engine/definition/api';
 import { ApiEndpoint } from '@rocket.chat/apps-engine/definition/api/ApiEndpoint';
 import { IApiEndpointInfo } from '@rocket.chat/apps-engine/definition/api/IApiEndpointInfo';
-import { IMessageAttachment } from '@rocket.chat/apps-engine/definition/messages';
 import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
 
 export class ProcessStepperApi extends ApiEndpoint {
+    private statusApp: RcStatusApp;
+
     constructor(app: RcStatusApp) {
         super(app);
+
+        this.statusApp = app;
         this.path = 'process';
     }
 
@@ -31,8 +32,17 @@ export class ProcessStepperApi extends ApiEndpoint {
             this.app.getLogger().log(`Going to the step: ${ request.query.step } from ${ record.step }`, record);
 
             switch (request.query.step) {
+                case StepEnum.Services:
+                    await this.statusApp.getCreationWorker().sendServiceSelection(record, read, modify, http);
+                    break;
                 case StepEnum.Status:
-                    await this.goToStatusSelection(record, read, modify);
+                    await this.statusApp.getCreationWorker().sendStatusSelection(record, read, modify);
+                    break;
+                case StepEnum.Review:
+                    await this.statusApp.getCreationWorker().sendDataForReview();
+                    break;
+                default:
+                    this.app.getLogger().warn(`Unknown step: ${ request.query.step }`);
                     break;
             }
 
@@ -42,69 +52,6 @@ export class ProcessStepperApi extends ApiEndpoint {
             this.app.getLogger().log(record);
         }
 
-        return {
-            status: HttpStatusCode.OK,
-            headers: {
-                'Content-Type': 'text/html; charset=utf-8',
-            },
-            content: '<html><body> <script type="text/javascript">window.close();</script> </body></html>',
-        };
-    }
-
-    private async goToStatusSelection(data: IContainer, read: IRead, modify: IModify): Promise<void> {
-        if (!data.data.services || data.data.services.length === 0) {
-            return;
-        }
-
-        data.step = StepEnum.Status;
-
-        const mb = modify.getCreator().startMessage()
-                    .setText('Please select the status for each service.')
-                    .setRoom(await RoomUtility.getRoom(read, data.roomId))
-                    .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
-
-        const params = `?userId=${ data.userId }&roomId=${ data.roomId }`;
-        const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
-        data.data.services.forEach((s) => {
-            const att: IMessageAttachment = {
-                color: '#ffff00',
-                title: {
-                    value: s.name,
-                },
-                actions: [],
-            };
-
-            Object.values(ServiceStatusEnum).forEach((sta) => {
-                if (!att.actions) {
-                    return;
-                }
-
-                att.actions.push({
-                    type: 'button',
-                    text: sta,
-                    url: `${ siteUrl }api/apps/public/${ this.app.getID() }/status${ params }&service=${ sta }`,
-                });
-            });
-
-            mb.addAttachment(att);
-        });
-
-        const finishAttach: IMessageAttachment = {
-            color: '#551a8b',
-            actions: [{
-                type: 'button',
-                text: 'Next Step',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Review }`,
-            }],
-        };
-
-        mb.addAttachment(finishAttach);
-
-        this.app.getLogger().log(mb.getMessage());
-
-        await modify.getCreator().finish(mb);
-
-        return;
+        return ApiResponseUtilities.getAutoClosingHtml();
     }
 }
