@@ -27,6 +27,7 @@ export class IncidentCreationWorker {
 
         if (existing.length > 0) {
             const msg = modify.getCreator().startMessage()
+                .setGroupable(false)
                 .setUsernameAlias('RC Status')
                 .setRoom(context.getRoom())
                 .setText('You are already creating an incident. Please abort if you wish to start over.');
@@ -130,6 +131,7 @@ export class IncidentCreationWorker {
 
         if (existing.length !== 1) {
             const msg = modify.getCreator().startMessage()
+                .setGroupable(false)
                 .setUsernameAlias('RC Status')
                 .setRoom(context.getRoom())
                 .setText('You are not creating an incident to describe.');

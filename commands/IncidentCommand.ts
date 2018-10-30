@@ -30,6 +30,7 @@ export class IncidentCommand implements ISlashCommand {
 
     private async handleNoArguments(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator().startMessage()
+            .setGroupable(false)
             .setRoom(context.getRoom())
             .setUsernameAlias('RC Status')
             .setText('Invalid syntax. Use: `/incident <create|describe|update|remove|abort>`');
@@ -38,28 +39,26 @@ export class IncidentCommand implements ISlashCommand {
     }
 
     private async handleOneArgument(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
-        let msg: IMessageBuilder;
+        let msg = modify.getCreator().startMessage().setRoom(context.getRoom()).setUsernameAlias('RC Status').setGroupable(false);
 
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
-                msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident create <title of incident>`');
+                msg = msg.setText('Invalid syntax. Creation uses: `/incident create <title of incident>`');
                 break;
             case 'describe':
-                msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident describe <brief description of the incident>`');
+                msg = msg.setText('Invalid syntax. Creation uses: `/incident describe <brief description of the incident>`');
                 break;
             case 'update':
-                msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident update <id of incident>`');
+                msg = msg.setText('Invalid syntax. Creation uses: `/incident update <id of incident>`');
                 break;
             case 'remove':
-                msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident remove <id of incident>`');
+                msg = msg.setText('Invalid syntax. Creation uses: `/incident remove <id of incident>`');
                 break;
             case 'abort':
                 return this.app.getAbortWorker().abort(context, read, modify, http, persis);
             default:
                 return this.handleNoArguments(context, modify);
         }
-
-        msg.setRoom(context.getRoom()).setUsernameAlias('RC Status');
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
     }
