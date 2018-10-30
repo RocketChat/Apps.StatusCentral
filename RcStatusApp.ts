@@ -30,7 +30,7 @@ export class RcStatusApp extends App {
     constructor(info: IAppInfo, logger: ILogger) {
         super(info, logger);
 
-        this.hw = new HttpWorker();
+        this.hw = new HttpWorker(this);
         this.iaw = new IncidentAbortWorker();
         this.icw = new IncidentCreationWorker(this);
     }

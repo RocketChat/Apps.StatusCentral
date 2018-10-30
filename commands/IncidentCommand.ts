@@ -32,7 +32,7 @@ export class IncidentCommand implements ISlashCommand {
         const msg = modify.getCreator().startMessage()
             .setRoom(context.getRoom())
             .setUsernameAlias('RC Status')
-            .setText('Invalid syntax. Use: `/incident <create|update|remove|abort>`');
+            .setText('Invalid syntax. Use: `/incident <create|describe|update|remove|abort>`');
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
     }
@@ -43,6 +43,9 @@ export class IncidentCommand implements ISlashCommand {
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
                 msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident create <title of incident>`');
+                break;
+            case 'describe':
+                msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident describe <brief description of the incident>`');
                 break;
             case 'update':
                 msg = modify.getCreator().startMessage().setText('Invalid syntax. Creation uses: `/incident update <id of incident>`');
@@ -64,6 +67,7 @@ export class IncidentCommand implements ISlashCommand {
     private async handleTwoArguments(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
+            case 'describe':
                 return this.handleEverythingElse(context, read, modify, http, persis);
             case 'update':
                 this.app.getLogger().log(context.getArguments().join(' '));
@@ -82,6 +86,8 @@ export class IncidentCommand implements ISlashCommand {
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
                 return this.app.getCreationWorker().start(context, read, modify, persis);
+            case 'describe':
+                return this.app.getCreationWorker().saveDescription(context, read, modify, http, persis);
             case 'abort':
                 return this.handleOneArgument(context, read, modify, http, persis);
             default:

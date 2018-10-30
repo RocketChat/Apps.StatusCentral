@@ -32,15 +32,20 @@ export class ProcessStepperApi extends ApiEndpoint {
             this.app.getLogger().log(`Going to the step: ${ request.query.step } from ${ record.step }`, record);
 
             switch (request.query.step) {
-                case StepEnum.Services:
-                    await this.statusApp.getCreationWorker().sendServiceSelection(record, read, modify, http);
-                    break;
                 case StepEnum.Status:
                     await this.statusApp.getCreationWorker().sendStatusSelection(record, read, modify);
                     break;
-                case StepEnum.Review:
-                    await this.statusApp.getCreationWorker().sendDataForReview();
+                case StepEnum.Describe:
+                    await this.statusApp.getCreationWorker().askForDescribeCommand(record, read, modify);
                     break;
+                case StepEnum.Services:
+                    await this.statusApp.getCreationWorker().sendServiceSelection(record, read, modify, http);
+                    break;
+                case StepEnum.Review:
+                    await this.statusApp.getCreationWorker().sendDataForReview(record, read, modify);
+                    break;
+                case StepEnum.Publish:
+                    return await this.handlePublish(record, read, modify, http, persis, [userAssoc, roomAssoc]);
                 default:
                     this.app.getLogger().warn(`Unknown step: ${ request.query.step }`);
                     break;
@@ -50,6 +55,18 @@ export class ProcessStepperApi extends ApiEndpoint {
             await persis.createWithAssociations(record, [userAssoc, roomAssoc]);
 
             this.app.getLogger().log(record);
+        }
+
+        return ApiResponseUtilities.getAutoClosingHtml();
+    }
+
+    // tslint:disable-next-line:max-line-length
+    private async handlePublish(record: IContainer, read: IRead, modify: IModify, http: IHttp, persis: IPersistence, assocs: Array<RocketChatAssociationRecord>): Promise<IApiResponse> {
+        const result = await this.statusApp.getCreationWorker().publishIncident(record, read, modify, http);
+
+        if (result) {
+            await persis.removeByAssociations(assocs);
+            this.app.getLogger().log('Incident created successfully', record);
         }
 
         return ApiResponseUtilities.getAutoClosingHtml();

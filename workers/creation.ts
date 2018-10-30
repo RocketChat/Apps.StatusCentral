@@ -1,8 +1,10 @@
 import { ServiceStatusEnum } from '../enums/serviceStatus';
+import { SettingsEnum } from '../enums/settings';
 import { StepEnum } from '../enums/step';
 import { RoomUtility } from '../utils/rooms';
 import { IncidenStatusEnum } from './../enums/incidentStatus';
 import { IContainer } from './../models/container';
+import { IIncidentUpdateModel } from './../models/incidentUpdate';
 import { RcStatusApp } from './../RcStatusApp';
 import { UserUtility } from './../utils/users';
 
@@ -49,7 +51,7 @@ export class IncidentCreationWorker {
         await persis.createWithAssociations(container, [userAssoc, roomAssoc]);
 
         const mb = modify.getCreator().startMessage()
-                    .setText('Please select the status of the incident:')
+                    .setText(`@${ context.getSender().username } has started creating an incident.\n\nPlease select the status of the incident:`)
                     .setRoom(context.getRoom())
                     .setSender(await UserUtility.getRocketCatUser(read))
                     .setUsernameAlias('RC Status');
@@ -86,7 +88,7 @@ export class IncidentCreationWorker {
             actions: [{
                 type: MessageActionType.BUTTON,
                 text: 'Next Step',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Services }`,
+                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Describe }`,
             }],
         };
 
@@ -99,7 +101,7 @@ export class IncidentCreationWorker {
         return;
     }
 
-    public async sendServiceSelection(data: IContainer, read: IRead, modify: IModify, http: IHttp): Promise<void> {
+    public async askForDescribeCommand(data: IContainer, read: IRead, modify: IModify): Promise<void> {
         if (data.step !== StepEnum.Creation) {
             // TODO: Maybe display an error showing except step but show current step?
             return;
@@ -110,10 +112,68 @@ export class IncidentCreationWorker {
             return;
         }
 
+        const mb = modify.getCreator().startMessage()
+                    .setText('Now, please provide a description of the incident via the command `/incident describe <details>`')
+                    .setRoom(await RoomUtility.getRoom(read, data.roomId))
+                    .setSender(await UserUtility.getRocketCatUser(read))
+                    .setUsernameAlias('RC Status');
+
+        this.app.getLogger().log(mb.getMessage()); // TODO: update the record and send out the serviceSelection below
+
+        await modify.getCreator().finish(mb);
+    }
+
+    public async saveDescription(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+        const userAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.USER, context.getSender().id);
+        const roomAssoc = new RocketChatAssociationRecord(RocketChatAssociationModel.ROOM, context.getRoom().id);
+        const existing = await read.getPersistenceReader().readByAssociations([userAssoc, roomAssoc]);
+
+        if (existing.length !== 1) {
+            const msg = modify.getCreator().startMessage()
+                .setUsernameAlias('RC Status')
+                .setRoom(context.getRoom())
+                .setText('You are not creating an incident to describe.');
+
+            await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
+            return;
+        }
+
+        const data = existing[0] as IContainer;
+        data.step = StepEnum.Describe;
+
+        this.app.getLogger().log(data);
+
+        const update: Partial<IIncidentUpdateModel> = {
+            time: data.data.time,
+            status: data.data.status,
+            message: context.getArguments().slice(1, context.getArguments().length).join(' '),
+        };
+
+        if (!data.data.updates) {
+            data.data.updates = [];
+        }
+
+        data.data.updates.push(update);
+
+        await this.sendServiceSelection(data, read, modify, http);
+
+        await persis.removeByAssociations([userAssoc, roomAssoc]);
+        await persis.createWithAssociations(data, [userAssoc, roomAssoc]);
+    }
+
+    public async sendServiceSelection(data: IContainer, read: IRead, modify: IModify, http: IHttp): Promise<void> {
+        if (data.step !== StepEnum.Describe) {
+            return;
+        }
+
+        if (!data.data.updates || data.data.updates.length === 0) {
+            return;
+        }
+
         const services = await this.app.getHttpWorker().retrieveServices(read, http);
 
         const mb = modify.getCreator().startMessage()
-                    .setText('Please select the services which are affected.')
+                    .setText('Description set. Now, it is time to select the services which are affected.')
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
                     .setUsernameAlias('RC Status');
@@ -161,8 +221,6 @@ export class IncidentCreationWorker {
         this.app.getLogger().log(mb.getMessage());
 
         await modify.getCreator().finish(mb);
-
-        return;
     }
 
     public async sendStatusSelection(data: IContainer, read: IRead, modify: IModify): Promise<void> {
@@ -223,7 +281,89 @@ export class IncidentCreationWorker {
         await modify.getCreator().finish(mb);
     }
 
-    public async sendDataForReview(): Promise<void> {
-        return;
+    public async sendDataForReview(data: IContainer, read: IRead, modify: IModify): Promise<void> {
+        if (!data.data.services || data.data.services.length === 0 || data.step !== StepEnum.Status) {
+            return;
+        }
+
+        data.step = StepEnum.Review;
+
+        const mb = modify.getCreator().startMessage()
+                    .setText('Please review the incident. Once you have reviewed, hit the publish button to make it live. :smile:')
+                    .setRoom(await RoomUtility.getRoom(read, data.roomId))
+                    .setSender(await UserUtility.getRocketCatUser(read))
+                    .setUsernameAlias('RC Status');
+
+        const params = `?userId=${ data.userId }&roomId=${ data.roomId }`;
+        const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
+
+        const attach: IMessageAttachment = {
+            color: '#00d800',
+            timestamp: new Date(),
+            title: {
+                value: 'Incident Data',
+            },
+            collapsed: false,
+            text: `
+\`\`\`
+${ JSON.stringify(data.data, null, 2) }
+\`\`\`
+            `,
+        };
+
+        mb.addAttachment(attach);
+
+        const finishAttach: IMessageAttachment = {
+            color: '#551a8b',
+            actions: [{
+                type: MessageActionType.BUTTON,
+                text: 'Publish! 🚀',
+                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Publish }`,
+            }],
+        };
+
+        mb.addAttachment(finishAttach);
+
+        this.app.getLogger().log(mb.getMessage());
+
+        await modify.getCreator().finish(mb);
+    }
+
+    public async publishIncident(data: IContainer, read: IRead, modify: IModify, http: IHttp): Promise<boolean> {
+        if (!data.data.services || data.data.services.length === 0 || data.step !== StepEnum.Review) {
+            return false;
+        }
+
+        const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
+
+        const mb = modify.getCreator().startMessage()
+                    .setRoom(await RoomUtility.getRoom(read, data.roomId))
+                    .setSender(await UserUtility.getRocketCatUser(read))
+                    .setUsernameAlias('RC Status');
+
+        let result = false;
+        try {
+            await this.app.getHttpWorker().createIncident(data.data, read, http);
+
+            data.step = StepEnum.Publish;
+            mb.setText(`Incident created! https://${ url }/`);
+
+            result = true;
+        } catch (e) {
+            mb.setText(`
+Sadly, an error occured with the request to create the incident:
+
+\`${ e.message }\`
+
+Maybe try again?
+`);
+
+        }
+
+        this.app.getLogger().log(mb.getMessage());
+
+        await modify.getCreator().finish(mb);
+
+        return result;
     }
 }
