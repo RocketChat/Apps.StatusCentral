@@ -118,7 +118,7 @@ export class IncidentCreationWorker {
                     .setSender(await UserUtility.getRocketCatUser(read))
                     .setUsernameAlias('RC Status');
 
-        this.app.getLogger().log(mb.getMessage()); // TODO: update the record and send out the serviceSelection below
+        this.app.getLogger().log(mb.getMessage());
 
         await modify.getCreator().finish(mb);
     }
