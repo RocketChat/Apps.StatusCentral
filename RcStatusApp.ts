@@ -68,6 +68,16 @@ export class RcStatusApp extends App {
             i18nDescription: 'Api_Key_Description',
         });
 
+        await configurationExtend.settings.provideSetting({
+            id: SettingsEnum.ROOM_ID,
+            type: SettingType.STRING,
+            required: true,
+            public: false,
+            packageValue: '',
+            i18nLabel: 'Room_Id',
+            i18nDescription: 'Room_Id_Description',
+        });
+
         await configurationExtend.http.providePreRequestHandler(new SettingToHttpHeader());
 
         await configurationExtend.api.provideApi({

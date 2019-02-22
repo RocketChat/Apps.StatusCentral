@@ -1,3 +1,4 @@
+import { SettingsEnum } from './../enums/settings';
 import { RcStatusApp } from './../RcStatusApp';
 
 import { IHttp, IMessageBuilder, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
@@ -7,7 +8,7 @@ export class IncidentCommand implements ISlashCommand {
     public command = 'incident';
     public i18nParamsExample = 'Incident_Command_Params_Example';
     public i18nDescription = 'Incident_Command_Description';
-    public permission = '';
+    public permission = 'view-logs';
     public providesPreview = false;
     private app: RcStatusApp;
 
@@ -16,6 +17,18 @@ export class IncidentCommand implements ISlashCommand {
     }
 
     public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+        const expectedRoomId = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.ROOM_ID);
+
+        if (expectedRoomId !== context.getRoom().id) {
+            return await this.handleIncorrectRoom(context, modify);
+        }
+
+        this.app.getLogger().log('testing');
+
+        if (!context.getRoom().usernames.includes('rocket.cat')) {
+            return await this.haveThemInviteRocketCatUser(context, modify);
+        }
+
         switch (context.getArguments().length) {
             case 0:
                 return this.handleNoArguments(context, modify);
@@ -92,5 +105,23 @@ export class IncidentCommand implements ISlashCommand {
             default:
                 return this.handleNoArguments(context, modify);
         }
+    }
+
+    private async handleIncorrectRoom(context: SlashCommandContext, modify: IModify): Promise<void> {
+        const msg = modify.getCreator()
+                .startMessage().setRoom(context.getRoom())
+                .setUsernameAlias('RC Status').setGroupable(false)
+                .setText(`Unexpected room. The room you're in (\`${ context.getRoom().id }\`) is not the expected room.`);
+
+        await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
+    }
+
+    private async haveThemInviteRocketCatUser(context: SlashCommandContext, modify: IModify): Promise<void> {
+        const msg = modify.getCreator()
+                .startMessage().setRoom(context.getRoom())
+                .setUsernameAlias('RC Status').setGroupable(false)
+                .setText(`Please invite the @rocket.cat user. (\`/invite @rocket.cat\`)`);
+
+        await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
     }
 }
