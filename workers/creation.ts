@@ -2,7 +2,7 @@ import { ServiceStatusEnum } from '../enums/serviceStatus';
 import { SettingsEnum } from '../enums/settings';
 import { StepEnum } from '../enums/step';
 import { RoomUtility } from '../utils/rooms';
-import { IncidenStatusEnum } from './../enums/incidentStatus';
+import { IncidentStatusEnum } from './../enums/incidentStatus';
 import { IContainer } from './../models/container';
 import { IIncidentUpdateModel } from './../models/incidentUpdate';
 import { RcStatusApp } from './../RcStatusApp';
@@ -39,7 +39,7 @@ export class IncidentCreationWorker {
         const title = context.getArguments().slice(1, context.getArguments().length).join(' ');
         this.app.getLogger().log(`Starting incident creation of: ${ title }`);
 
-        const container: IContainer = {
+        const container: Partial<IContainer> = {
             step: StepEnum.Creation,
             userId: userAssoc.getID(),
             roomId: roomAssoc.getID(),
@@ -70,7 +70,7 @@ export class IncidentCreationWorker {
 
         const params = `?userId=${ container.userId }&roomId=${ container.roomId }`;
         const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
-        Object.values(IncidenStatusEnum).forEach((s) => {
+        Object.values(IncidentStatusEnum).forEach((s) => {
             if (!attach.actions) {
                 return;
             }
@@ -345,10 +345,10 @@ ${ JSON.stringify(data.data, null, 2) }
 
         let result = false;
         try {
-            await this.app.getHttpWorker().createIncident(data.data, read, http);
+            const inc = await this.app.getHttpWorker().createIncident(data.data, read, http);
 
             data.step = StepEnum.Publish;
-            mb.setText(`Incident created! https://${ url }/`);
+            mb.setText(`Incident created (id \`${ inc.id }\`)! https://${ url }/`);
 
             result = true;
         } catch (e) {

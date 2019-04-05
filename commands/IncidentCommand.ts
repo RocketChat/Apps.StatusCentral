@@ -23,9 +23,10 @@ export class IncidentCommand implements ISlashCommand {
             return await this.handleIncorrectRoom(context, modify);
         }
 
-        this.app.getLogger().log('testing');
+        const members = await read.getRoomReader().getMembers(expectedRoomId);
 
-        if (!context.getRoom().usernames.includes('rocket.cat')) {
+        if (members.filter((m) => m.username.toLowerCase() === 'rocket.cat').length === 0) {
+            this.app.getLogger().warn('The Rocket.Cat user is not in the room.');
             return await this.haveThemInviteRocketCatUser(context, modify);
         }
 
@@ -46,7 +47,7 @@ export class IncidentCommand implements ISlashCommand {
             .setGroupable(false)
             .setRoom(context.getRoom())
             .setUsernameAlias('RC Status')
-            .setText('Invalid syntax. Use: `/incident <create|describe|update|remove|abort>`');
+            .setText('Invalid syntax. Use: `/incident <create|describe|update|explain|remove|abort>`');
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
     }
@@ -59,7 +60,10 @@ export class IncidentCommand implements ISlashCommand {
                 msg = msg.setText('Invalid syntax. Creation uses: `/incident create <title of incident>`');
                 break;
             case 'describe':
-                msg = msg.setText('Invalid syntax. Creation uses: `/incident describe <brief description of the incident>`');
+                msg = msg.setText('Invalid syntax. Describe uses: `/incident describe <brief description of the incident>`');
+                break;
+            case 'explain':
+                msg = msg.setText('Invalid syntax. Explain uses: `/incident explain <brief explanation of the update>`');
                 break;
             case 'update':
                 msg = msg.setText('Invalid syntax. Creation uses: `/incident update <id of incident>`');
@@ -80,10 +84,10 @@ export class IncidentCommand implements ISlashCommand {
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
             case 'describe':
+            case 'explain':
                 return this.handleEverythingElse(context, read, modify, http, persis);
             case 'update':
-                this.app.getLogger().log(context.getArguments().join(' '));
-                break;
+                return this.app.getUpdateWorker().start(context, read, modify, http, persis);
             case 'remove':
                 this.app.getLogger().log(context.getArguments().join(' '));
                 break;
@@ -100,6 +104,8 @@ export class IncidentCommand implements ISlashCommand {
                 return this.app.getCreationWorker().start(context, read, modify, persis);
             case 'describe':
                 return this.app.getCreationWorker().saveDescription(context, read, modify, http, persis);
+            case 'explain':
+                return this.app.getUpdateWorker().saveExplanation(context, read, modify, http, persis);
             case 'abort':
                 return this.handleOneArgument(context, read, modify, http, persis);
             default:

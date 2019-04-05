@@ -1,9 +1,10 @@
+import { IIncidentUpdateModel } from '../models/incidentUpdate';
+import { IServiceModel } from '../models/service';
 import { SettingsEnum } from './../enums/settings';
 import { IIncidentModel } from './../models/incident';
 import { RcStatusApp } from './../RcStatusApp';
 
 import { HttpStatusCode, IHttp, IHttpRequest, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { IServiceModel } from '../models/service';
 
 export class HttpWorker {
     constructor(private app: RcStatusApp) { }
@@ -24,7 +25,7 @@ export class HttpWorker {
         return result.data as Array<IServiceModel>;
     }
 
-    public async createIncident(data: Partial<IIncidentModel>, read: IRead, http: IHttp): Promise<void> {
+    public async createIncident(data: Partial<IIncidentModel>, read: IRead, http: IHttp): Promise<IIncidentModel> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
 
         const options: IHttpRequest = {
@@ -36,5 +37,35 @@ export class HttpWorker {
         if (result.statusCode !== HttpStatusCode.CREATED) {
             throw new Error(`Failure to create the incident: ${ result.data.message } (${ result.statusCode })`);
         }
+
+        return result.data as IIncidentModel;
+    }
+
+    public async getIncident(id: string, read: IRead, http: IHttp): Promise<IIncidentModel> {
+        const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
+
+        const result = await http.get(`http://${ url }/api/v1/incidents/${ id }`);
+
+        if (result.statusCode !== HttpStatusCode.OK) {
+            throw new Error(`Failure to get the incident: ${ result.data.message } (${ result.statusCode })`);
+        }
+
+        return result.data as IIncidentModel;
+    }
+
+    public async createUpdate(id: number, update: Partial<IIncidentUpdateModel>, read: IRead, http: IHttp): Promise<IIncidentModel> {
+        const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
+
+        const options: IHttpRequest = {
+            data: update,
+        };
+
+        const result = await http.post(`http://${ url }/api/v1/incidents/${ id }/updates`, options);
+
+        if (result.statusCode !== HttpStatusCode.CREATED) {
+            throw new Error(`Failure to create the incident: ${ result.data.message } (${ result.statusCode })`);
+        }
+
+        return result.data as IIncidentModel;
     }
 }

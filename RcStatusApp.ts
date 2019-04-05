@@ -2,12 +2,14 @@ import { IncidentStatusApi } from './api/incident';
 import { ProcessStepperApi } from './api/process';
 import { ServiceSelectionApi } from './api/service';
 import { StatusSelectionApi } from './api/status';
+import { UpdateStatusApi } from './api/update';
 import { IncidentCommand } from './commands/IncidentCommand';
 import { SettingsEnum } from './enums/settings';
 import { SettingToHttpHeader } from './handlers/settingToHttpHeader';
 import { IncidentAbortWorker } from './workers/abort';
 import { IncidentCreationWorker } from './workers/creation';
 import { HttpWorker } from './workers/http';
+import { IncidentUpdateWorker } from './workers/update';
 
 import {
     IConfigurationExtend,
@@ -26,6 +28,7 @@ export class RcStatusApp extends App {
     private hw: HttpWorker;
     private iaw: IncidentAbortWorker;
     private icw: IncidentCreationWorker;
+    private iuw: IncidentUpdateWorker;
 
     constructor(info: IAppInfo, logger: ILogger) {
         super(info, logger);
@@ -33,6 +36,7 @@ export class RcStatusApp extends App {
         this.hw = new HttpWorker(this);
         this.iaw = new IncidentAbortWorker();
         this.icw = new IncidentCreationWorker(this);
+        this.iuw = new IncidentUpdateWorker(this);
     }
 
     public async onEnable(er: IEnvironmentRead, cm: IConfigurationModify): Promise<boolean> {
@@ -88,6 +92,7 @@ export class RcStatusApp extends App {
                 new IncidentStatusApi(this),
                 new ServiceSelectionApi(this),
                 new StatusSelectionApi(this),
+                new UpdateStatusApi(this),
             ],
         });
     }
@@ -106,6 +111,10 @@ export class RcStatusApp extends App {
 
     public getCreationWorker(): IncidentCreationWorker {
         return this.icw;
+    }
+
+    public getUpdateWorker(): IncidentUpdateWorker {
+        return this.iuw;
     }
 
     public getHttpWorker(): HttpWorker {

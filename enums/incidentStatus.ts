@@ -1,4 +1,4 @@
-export enum IncidenStatusEnum {
+export enum IncidentStatusEnum {
     Investigating = 'Investigating',
     Identified = 'Identified',
     Update = 'Update',
