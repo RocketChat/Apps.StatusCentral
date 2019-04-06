@@ -12,7 +12,7 @@ export class HttpWorker {
     public async testApi(read: IRead, http: IHttp): Promise<boolean> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
 
-        const result = await http.get(`http://${ url }/api/v1/config`);
+        const result = await http.get(`https://${ url }/api/v1/config`);
 
         return result.statusCode === HttpStatusCode.OK;
     }
@@ -20,7 +20,7 @@ export class HttpWorker {
     public async retrieveServices(read: IRead, http: IHttp): Promise<Array<IServiceModel>> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
 
-        const result = await http.get(`http://${ url }/api/v1/services`);
+        const result = await http.get(`https://${ url }/api/v1/services`);
 
         return result.data as Array<IServiceModel>;
     }
@@ -32,10 +32,14 @@ export class HttpWorker {
             data,
         };
 
-        const result = await http.post(`http://${ url }/api/v1/incidents`, options);
+        const result = await http.post(`https://${ url }/api/v1/incidents`, options);
 
         if (result.statusCode !== HttpStatusCode.CREATED) {
-            throw new Error(`Failure to create the incident: ${ result.data.message } (${ result.statusCode })`);
+            if (result.data && result.data.message) {
+                throw new Error(`Failure to create the incident: ${ result.data.message } (Status Code ${ result.statusCode })`);
+            } else {
+                throw new Error(`Failure to create the incident: "${ result.content }" (Status Code ${ result.statusCode })`);
+            }
         }
 
         return result.data as IIncidentModel;
@@ -44,7 +48,7 @@ export class HttpWorker {
     public async getIncident(id: string, read: IRead, http: IHttp): Promise<IIncidentModel> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
 
-        const result = await http.get(`http://${ url }/api/v1/incidents/${ id }`);
+        const result = await http.get(`https://${ url }/api/v1/incidents/${ id }`);
 
         if (result.statusCode !== HttpStatusCode.OK) {
             throw new Error(`Failure to get the incident: ${ result.data.message } (${ result.statusCode })`);
@@ -60,7 +64,7 @@ export class HttpWorker {
             data: update,
         };
 
-        const result = await http.post(`http://${ url }/api/v1/incidents/${ id }/updates`, options);
+        const result = await http.post(`https://${ url }/api/v1/incidents/${ id }/updates`, options);
 
         if (result.statusCode !== HttpStatusCode.CREATED) {
             throw new Error(`Failure to create the incident: ${ result.data.message } (${ result.statusCode })`);
