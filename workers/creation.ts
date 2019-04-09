@@ -72,7 +72,7 @@ export class IncidentCreationWorker {
 
         const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
         const params = `?userId=${ container.userId }&roomId=${ container.roomId }`;
-        Object.values(IncidentStatusEnum).forEach(async (s) => {
+        Object.values(IncidentStatusEnum).forEach((s) => {
             if (!attach.actions) {
                 return;
             }
