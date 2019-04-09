@@ -63,6 +63,16 @@ export class RcStatusApp extends App {
         });
 
         await configurationExtend.settings.provideSetting({
+            id: SettingsEnum.SERVER_URL_USE_SLL,
+            type: SettingType.BOOLEAN,
+            required: true,
+            public: false,
+            packageValue: true,
+            i18nLabel: 'Server_Url_Ssl',
+            i18nDescription: 'Server_Url_Ssl_Description',
+        });
+
+        await configurationExtend.settings.provideSetting({
             id: SettingsEnum.API_KEY,
             type: SettingType.STRING,
             required: true,

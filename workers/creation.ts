@@ -6,12 +6,14 @@ import { IncidentStatusEnum } from './../enums/incidentStatus';
 import { IContainer } from './../models/container';
 import { IIncidentUpdateModel } from './../models/incidentUpdate';
 import { RcStatusApp } from './../RcStatusApp';
+import { UrlUtils } from './../utils/urls';
 import { UserUtility } from './../utils/users';
 
 import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
-import { IMessageAttachment, MessageActionButtonsAlignment, MessageActionType } from '@rocket.chat/apps-engine/definition/messages';
+import { IMessageAttachment, MessageActionButtonsAlignment, MessageActionType , MessageProcessingType } from '@rocket.chat/apps-engine/definition/messages';
 import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
 import { SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
+import { IServiceModel } from '../models/service';
 
 export class IncidentCreationWorker {
     private app: RcStatusApp;
@@ -68,9 +70,9 @@ export class IncidentCreationWorker {
             actions: [],
         };
 
-        const params = `?userId=${ container.userId }&roomId=${ container.roomId }`;
         const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
-        Object.values(IncidentStatusEnum).forEach((s) => {
+        const params = `?userId=${ container.userId }&roomId=${ container.roomId }`;
+        Object.values(IncidentStatusEnum).forEach(async (s) => {
             if (!attach.actions) {
                 return;
             }
@@ -78,7 +80,7 @@ export class IncidentCreationWorker {
             attach.actions.push({
                 type: MessageActionType.BUTTON,
                 text: s,
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/incident${ params }&status=${ s }`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/incident${ params }&status=${ s }`),
             });
         });
 
@@ -89,7 +91,7 @@ export class IncidentCreationWorker {
             actions: [{
                 type: MessageActionType.BUTTON,
                 text: 'Next Step',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Describe }`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Describe }`),
             }],
         };
 
@@ -118,6 +120,22 @@ export class IncidentCreationWorker {
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
                     .setUsernameAlias('RC Status');
+
+        const attach: IMessageAttachment = {
+            color: '#a83c0e',
+            actionButtonsAlignment: MessageActionButtonsAlignment.HORIZONTAL,
+            actions: [
+                {
+                    type: MessageActionType.BUTTON,
+                    text: 'Describe it',
+                    msg: '/incident describe <details>',
+                    msg_in_chat_window: true,
+                    msg_processing_type: MessageProcessingType.RespondWithMessage,
+                },
+            ],
+        };
+
+        mb.addAttachment(attach);
 
         this.app.getLogger().log(mb.getMessage());
 
@@ -172,7 +190,29 @@ export class IncidentCreationWorker {
             return;
         }
 
-        const services = await this.app.getHttpWorker().retrieveServices(read, http);
+        let services: Array<IServiceModel>;
+        try {
+            services = await this.app.getHttpWorker().retrieveServices(read, http);
+        } catch (e) {
+            const emb = modify.getCreator().startMessage()
+                    .setRoom(await RoomUtility.getRoom(read, data.roomId))
+                    .setSender(await UserUtility.getRocketCatUser(read))
+                    .setUsernameAlias('RC Status');
+
+            emb.setText(`
+Description set. Sadly, however, an error occured with the request to retrieve the services:
+
+\`${ e.message }\`
+
+Maybe try again?
+            `);
+
+            this.app.getLogger().log(emb.getMessage());
+
+            await modify.getCreator().finish(emb);
+
+            return;
+        }
 
         const mb = modify.getCreator().startMessage()
                     .setText('Description set. Now, it is time to select the services which are affected.')
@@ -202,7 +242,7 @@ export class IncidentCreationWorker {
             attach.actions.push({
                 type: MessageActionType.BUTTON,
                 text: s.name,
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/service${ params }&service=${ s.name }`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/service${ params }&service=${ s.name }`),
             });
         });
 
@@ -214,7 +254,7 @@ export class IncidentCreationWorker {
             actions: [{
                 type: MessageActionType.BUTTON,
                 text: 'Next Step',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Status }`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Status }`),
             }],
         };
 
@@ -260,7 +300,7 @@ export class IncidentCreationWorker {
                 att.actions.push({
                     type: MessageActionType.BUTTON,
                     text: sta,
-                    url: `${ siteUrl }api/apps/public/${ this.app.getID() }/status${ params }&service=${ s.name }&status=${ sta }`,
+                    url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/status${ params }&service=${ s.name }&status=${ sta }`),
                 });
             });
 
@@ -272,7 +312,7 @@ export class IncidentCreationWorker {
             actions: [{
                 type: MessageActionType.BUTTON,
                 text: 'Next Step',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Review }`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Review }`),
             }],
         };
 
@@ -320,7 +360,7 @@ ${ JSON.stringify(data.data, null, 2) }
             actions: [{
                 type: MessageActionType.BUTTON,
                 text: 'Publish! 🚀',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Publish }`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Publish }`),
             }],
         };
 

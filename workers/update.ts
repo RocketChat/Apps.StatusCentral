@@ -9,6 +9,7 @@ import { StepEnum } from '../enums/step';
 import { IContainer } from '../models/container';
 import { RcStatusApp } from '../RcStatusApp';
 import { RoomUtility } from '../utils/rooms';
+import { UrlUtils } from '../utils/urls';
 import { UserUtility } from '../utils/users';
 import { IIncidentModel } from './../models/incident';
 
@@ -93,7 +94,7 @@ export class IncidentUpdateWorker {
             attach.actions.push({
                 type: MessageActionType.BUTTON,
                 text: s,
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/update${ params }&status=${ s }`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/update${ params }&status=${ s }`),
             });
         });
 
@@ -104,7 +105,7 @@ export class IncidentUpdateWorker {
             actions: [{
                 type: MessageActionType.BUTTON,
                 text: 'Next Step',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Describe }&which=update`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Describe }&which=update`),
             }],
         };
 
@@ -203,7 +204,7 @@ ${ JSON.stringify(data.update, null, 2) }
             actions: [{
                 type: MessageActionType.BUTTON,
                 text: 'Publish! 🚀',
-                url: `${ siteUrl }api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Publish }&which=update`,
+                url: UrlUtils.buildSiteUrl(siteUrl, `api/apps/public/${ this.app.getID() }/process${ params }&step=${ StepEnum.Publish }&which=update`),
             }],
         };
 

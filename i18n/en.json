@@ -1,6 +1,8 @@
 {
     "Server_Url": "Status Endpoint URL",
     "Server_Url_Description": "The endpoint of where the site lives, without `https` or `/`s as those are implied.",
+    "Server_Url_Ssl": "Use SSL Protocol",
+    "Server_Url_Ssl_Description": "Whether to use `https` or `http` in the server url.",
     "Api_Key": "API Key",
     "Api_Key_Description": "The API Key which is valid for the status server.",
     "Room_Id": "Room ID",
