@@ -17,18 +17,33 @@ import {
     IEnvironmentRead,
     IHttp,
     ILogger,
+    IModify,
+    IPersistence,
     IRead,
 } from '@rocket.chat/apps-engine/definition/accessors';
 import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
 import { App } from '@rocket.chat/apps-engine/definition/App';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISetting, SettingType } from '@rocket.chat/apps-engine/definition/settings';
+import {
+    IUIKitInteractionHandler,
+    UIKitBlockInteractionContext,
+    UIKitViewSubmitInteractionContext,
+} from '@rocket.chat/apps-engine/definition/uikit';
+import { IncidentsCreateView } from './view/incident/create-incident-view';
+import { IncidentService } from './service/incident-service';
+import { CloudServicesService } from './service/cloud-services-service';
+import { IncidentStatusEnum } from './enums/incidentStatus';
+import { ServiceStatusEnum } from './enums/serviceStatus';
 
-export class RcStatusApp extends App {
+export class RcStatusApp extends App implements IUIKitInteractionHandler {
     private hw: HttpWorker;
     private iaw: IncidentAbortWorker;
     private icw: IncidentCreationWorker;
     private iuw: IncidentUpdateWorker;
+    private incidentService: IncidentService;
+    private cloudServicesService: CloudServicesService;
+    public incidentCreateView: IncidentsCreateView;
 
     constructor(info: IAppInfo, logger: ILogger) {
         super(info, logger);
@@ -37,6 +52,9 @@ export class RcStatusApp extends App {
         this.iaw = new IncidentAbortWorker();
         this.icw = new IncidentCreationWorker(this);
         this.iuw = new IncidentUpdateWorker(this);
+        this.incidentService = new IncidentService(logger);
+        this.cloudServicesService = new CloudServicesService(logger);
+        this.incidentCreateView = new IncidentsCreateView(logger, this.incidentService);
     }
 
     public async onEnable(er: IEnvironmentRead, cm: IConfigurationModify): Promise<boolean> {
@@ -49,15 +67,64 @@ export class RcStatusApp extends App {
         return true;
     }
 
+    public async executeViewSubmitHandler(context: UIKitViewSubmitInteractionContext, read: IRead, http: IHttp, persistence: IPersistence, modify: IModify) {
+        const data = context.getInteractionData();
+        switch (data.view.id) {
+            case 'incident_create_view': {
+                try {
+                    await this.incidentCreateView.onSubmitAsync(data.view.state, modify, read, http);
+                    return {
+                        success: true,
+                    };
+                } catch (err) {
+                    console.log(err);
+                    this.getLogger().log(err);
+                    return context.getInteractionResponder().viewErrorResponse({
+                        viewId: data.view.id,
+                        errors: err,
+                    });
+                }
+            }
+            default: {
+                return {
+                    success: true,
+                };
+            }
+        }
+    }
+
+    public async executeBlockActionHandler(context: UIKitBlockInteractionContext, read: IRead, http: IHttp, persistence: IPersistence, modify: IModify) {
+        const data = context.getInteractionData();
+        switch (data.actionId) {
+            case 'vinc_services_multi_select': {
+                if (data.value) {
+                    const incidentStatus = Object.keys(IncidentStatusEnum).map((key) => ({id: key, name: IncidentStatusEnum[key]}));
+                    const cloudServices = await this.cloudServicesService.get(read, http);
+                    const cloudServiceStatus = Object.keys(ServiceStatusEnum).map((key) => ({id: key, name: ServiceStatusEnum[key]}));
+                    const cloudServicesSelected = <any> data.value
+
+                    this.incidentCreateView.setState(incidentStatus, cloudServices, cloudServicesSelected, cloudServiceStatus)
+                    return context.getInteractionResponder().updateModalViewResponse(await this.incidentCreateView.renderAsync(modify));
+                }
+            }
+            default: {
+                return {
+                    success: true,
+                    triggerId: data.triggerId,
+                }; 
+            }
+        }
+    }
+
     public async initialize(configurationExtend: IConfigurationExtend): Promise<void> {
-        await configurationExtend.slashCommands.provideSlashCommand(new IncidentCommand(this));
+        await configurationExtend.slashCommands.provideSlashCommand(new IncidentCommand(this, this.incidentService, this.cloudServicesService));
 
         await configurationExtend.settings.provideSetting({
             id: SettingsEnum.SERVER_URL,
             type: SettingType.STRING,
             required: true,
             public: false,
-            packageValue: 'status.rocket.chat',
+            packageValue: 'statuscentral:5050',
             i18nLabel: 'Server_Url',
             i18nDescription: 'Server_Url_Description',
         });
@@ -67,7 +134,7 @@ export class RcStatusApp extends App {
             type: SettingType.BOOLEAN,
             required: true,
             public: false,
-            packageValue: true,
+            packageValue: false,
             i18nLabel: 'Server_Url_Ssl',
             i18nDescription: 'Server_Url_Ssl_Description',
         });
@@ -77,7 +144,7 @@ export class RcStatusApp extends App {
             type: SettingType.STRING,
             required: true,
             public: false,
-            packageValue: '',
+            packageValue: 'abc123def456',
             i18nLabel: 'Api_Key',
             i18nDescription: 'Api_Key_Description',
         });
@@ -87,7 +154,7 @@ export class RcStatusApp extends App {
             type: SettingType.STRING,
             required: true,
             public: false,
-            packageValue: '',
+            packageValue: 'YkKZaT9DZPx6ELoMq',
             i18nLabel: 'Room_Id',
             i18nDescription: 'Room_Id_Description',
         });

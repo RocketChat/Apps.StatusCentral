@@ -1,0 +1,75 @@
+version: '3'
+
+services:
+  mongo:
+    container_name: mongo
+    image: mongo:4.0
+    restart: unless-stopped
+    volumes:
+     - mongo_vol:/data/db
+    command: mongod --smallfiles --oplogSize 128 --replSet rs0 --storageEngine=mmapv1
+  mongo-init-replica:
+    container_name: mongo_init_replica
+    image: mongo:4.0
+    command: >
+      bash -c
+        "for i in `seq 1 30`; do
+          mongo mongo/rocketchat --eval \"
+            rs.initiate({
+              _id: 'rs0',
+              members: [ { _id: 0, host: 'mongo:27017' } ]})\" &&
+          s=$$? && break || s=$$?;
+          echo \"Tried $$i times. Waiting 5 secs...\";
+          sleep 5;
+        done; (exit $$s)"
+    depends_on:
+      - mongo
+  rocket:
+    container_name: rocket
+    image: rocketchat/rocket.chat:latest
+    command: >
+      bash -c
+        "for i in `seq 1 30`; do
+          node main.js &&
+          s=$$? && break || s=$$?;
+          echo \"Tried $$i times. Waiting 5 secs...\";
+          sleep 5;
+        done; (exit $$s)"
+    restart: unless-stopped
+    volumes:
+      - rocket_vol:/app/uploads
+    environment:
+      - PORT=3000
+      - ROOT_URL=http://localhost:3000
+      - MONGO_URL=mongodb://mongo:27017/rocketchat
+      - MONGO_OPLOG_URL=mongodb://mongo:27017/local
+      - MAIL_URL=smtp://smtp.email
+    depends_on:
+      - mongo
+    ports:
+      - 3000:3000
+  statuscentral:
+    container_name: statuscentral
+    image: statuscentral:latest
+    build:
+      context: $GOPATH/src/github.com/RocketChat/statuscentral
+      dockerfile: Dockerfile
+      args:
+        - PORT=5050
+        - CONF_FILE=statuscentral.local.yaml
+        - DB_DIR=data/db
+        - GIN_MODE=debug
+    environment:
+      - PORT=5050
+      - CONF_FILE=statuscentral.local.yaml
+      - DB_DIR=data/db
+      - GIN_MODE=debug
+    restart: unless-stopped
+    volumes:
+      - statuscentral_vol:/usr/local/statuscentral/data/db
+    ports:
+      - 5050:5050
+volumes:
+  rocket_vol:
+  mongo_vol:
+  statuscentral_vol:

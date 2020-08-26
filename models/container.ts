@@ -1,10 +1,10 @@
 import { StepEnum } from './../enums/step';
-import { IIncidentModel } from './incident';
-import { IIncidentUpdateModel } from './incidentUpdate';
+import { Incident } from './incident';
+import { IncidentUpdate } from './incident-update';
 
 export interface IContainer {
-    data: Partial<IIncidentModel>;
-    update: Partial<IIncidentUpdateModel>;
+    data: Partial<Incident>;
+    update: Partial<IncidentUpdate>;
     step: StepEnum;
     userId: string;
     roomId: string;

@@ -1,4 +1,4 @@
-import { IServiceModel } from '../models/service';
+import { Service } from '../models/service';
 import { RcStatusApp } from '../RcStatusApp';
 import { ApiResponseUtilities } from '../utils/apiResponses';
 import { IContainer } from './../models/container';
@@ -29,7 +29,7 @@ export class ServiceSelectionApi extends ApiEndpoint {
                 record.data.services = [];
             }
 
-            const service: Partial<IServiceModel> = { name: request.query.service };
+            const service: Partial<Service> = { name: request.query.service };
             const found = record.data.services.find((s) => s.name === service.name);
 
             if (!found) {

@@ -13,7 +13,7 @@ export class IncidentAbortWorker {
         if (existing.length <= 0) {
             const msg = modify.getCreator().startMessage()
                 .setGroupable(false)
-                .setUsernameAlias('RC Status')
+                .setUsernameAlias('Houston Control')
                 .setRoom(context.getRoom())
                 .setText('You were not creating an incident to abort.');
 
@@ -27,7 +27,7 @@ export class IncidentAbortWorker {
                     .setText(`@${ context.getSender().username } has stopped creating the incident.`)
                     .setRoom(context.getRoom())
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         await modify.getCreator().finish(mb);
     }

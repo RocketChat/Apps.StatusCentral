@@ -1,8 +1,12 @@
 import { SettingsEnum } from './../enums/settings';
 import { RcStatusApp } from './../RcStatusApp';
 
-import { IHttp, IMessageBuilder, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
+import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
+import { IncidentService } from '../service/incident-service';
+import { CloudServicesService } from '../service/cloud-services-service';
+import { IncidentStatusEnum } from '../enums/incidentStatus';
+import { ServiceStatusEnum } from '../enums/serviceStatus';
 
 export class IncidentCommand implements ISlashCommand {
     public command = 'incident';
@@ -11,9 +15,13 @@ export class IncidentCommand implements ISlashCommand {
     public permission = 'view-logs';
     public providesPreview = false;
     private app: RcStatusApp;
+    private incidentService: IncidentService;
+    private cloudServicesService: CloudServicesService;
 
-    constructor(app: RcStatusApp) {
+    constructor(app: RcStatusApp, incidentService: IncidentService, cloudServicesService: CloudServicesService) {
         this.app = app;
+        this.incidentService = incidentService;
+        this.cloudServicesService = cloudServicesService;
     }
 
     public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
@@ -30,60 +38,75 @@ export class IncidentCommand implements ISlashCommand {
             return await this.haveThemInviteRocketCatUser(context, modify);
         }
 
+        console.log(context.getArguments().length)
+        this.app.getLogger().log(context.getArguments().length)
+
         switch (context.getArguments().length) {
             case 0:
-                return this.handleNoArguments(context, modify);
+                return this.handleNoArguments(context, read, modify, http);
             case 1:
-                return this.handleOneArgument(context, read, modify, http, persis);
-            case 2:
-                return this.handleTwoArguments(context, read, modify, http, persis);
+                return this.handleOneArgument(context, read, modify, http);
             default:
-                return this.handleEverythingElse(context, read, modify, http, persis);
+                return this.handleNoArguments(context, read, modify, http);
         }
     }
 
-    private async handleNoArguments(context: SlashCommandContext, modify: IModify): Promise<void> {
-        const msg = modify.getCreator().startMessage()
+    private async handleNoArguments(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp): Promise<void> {
+        const message = modify.getCreator().startMessage()
             .setGroupable(false)
             .setRoom(context.getRoom())
-            .setUsernameAlias('RC Status')
-            .setText('Invalid syntax. Use: `/incident <create|describe|update|explain|remove|abort>`');
-
-        await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
+            .setUsernameAlias('Houston Control')
+            .setText('Invalid syntax. Use: `/incident <create|update|close>`');
+        await modify.getNotifier().notifyUser(context.getSender(), message.getMessage());
     }
 
-    private async handleOneArgument(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
-        let msg = modify.getCreator().startMessage().setRoom(context.getRoom()).setUsernameAlias('RC Status').setGroupable(false);
+    private async handleOneArgument(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp): Promise<void> {
+        let message = modify.getCreator().startMessage()
+            .setRoom(context.getRoom())
+            .setUsernameAlias('Houston Control')
+            .setGroupable(false);
 
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
-                msg = msg.setText('Invalid syntax. Creation uses: `/incident create <title of incident>`');
-                break;
-            case 'describe':
-                msg = msg.setText('Invalid syntax. Describe uses: `/incident describe <brief description of the incident>`');
-                break;
-            case 'explain':
-                msg = msg.setText('Invalid syntax. Explain uses: `/incident explain <brief explanation of the update>`');
-                break;
+                const triggerId = context.getTriggerId();
+                if (triggerId) {
+                    try {
+                        const incidentStatus = Object.keys(IncidentStatusEnum).map((key) => ({id: key, name: IncidentStatusEnum[key]}));
+                        const cloudServices = await this.cloudServicesService.get(read, http);
+                        const cloudServiceStatus = Object.keys(ServiceStatusEnum).map((key) => ({id: key, name: ServiceStatusEnum[key]}));
+    
+                        this.app.incidentCreateView.setState(incidentStatus, cloudServices, [], cloudServiceStatus, context.getRoom());
+                        const view = await this.app.incidentCreateView.renderAsync(modify);
+                        return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());    
+                    } catch (err) {
+                        this.app.getLogger().log(`An error occured during the incident creation request. Error: ${err}`);
+                        message = message.setText('An error occured during the incident creation request. Please, try again later');
+                        break;
+                    }
+                } else {
+                    break;
+                }
             case 'update':
-                msg = msg.setText('Invalid syntax. Creation uses: `/incident update <id of incident>`');
+                message = message.setText('Invalid syntax. Update uses: `/incident update <id of incident>`');
                 break;
-            case 'remove':
-                msg = msg.setText('Invalid syntax. Creation uses: `/incident remove <id of incident>`');
+            case 'close':
+                message = message.setText('Invalid syntax. Close uses: `/incident close <id of incident>`');
                 break;
-            case 'abort':
-                return this.app.getAbortWorker().abort(context, read, modify, http, persis);
             default:
-                return this.handleNoArguments(context, modify);
+                message = modify.getCreator().startMessage()
+                    .setGroupable(false)
+                    .setRoom(context.getRoom())
+                    .setUsernameAlias('Houston Control')
+                    .setText('Invalid syntax. Use: `/incident <create|update|close>`');
         }
 
-        await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
+        await modify.getNotifier().notifyUser(context.getSender(), message.getMessage());
     }
 
+    /*
     private async handleTwoArguments(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
-            case 'describe':
             case 'explain':
                 return this.handleEverythingElse(context, read, modify, http, persis);
             case 'update':
@@ -97,26 +120,12 @@ export class IncidentCommand implements ISlashCommand {
                 return this.handleNoArguments(context, modify);
         }
     }
-
-    private async handleEverythingElse(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
-        switch (context.getArguments()[0].toLowerCase()) {
-            case 'create':
-                return this.app.getCreationWorker().start(context, read, modify, persis);
-            case 'describe':
-                return this.app.getCreationWorker().saveDescription(context, read, modify, http, persis);
-            case 'explain':
-                return this.app.getUpdateWorker().saveExplanation(context, read, modify, http, persis);
-            case 'abort':
-                return this.handleOneArgument(context, read, modify, http, persis);
-            default:
-                return this.handleNoArguments(context, modify);
-        }
-    }
+    */
 
     private async handleIncorrectRoom(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator()
                 .startMessage().setRoom(context.getRoom())
-                .setUsernameAlias('RC Status').setGroupable(false)
+                .setUsernameAlias('Houston Control').setGroupable(false)
                 .setText(`Unexpected room. The room you're in (\`${ context.getRoom().id }\`) is not the expected room.`);
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
@@ -125,7 +134,7 @@ export class IncidentCommand implements ISlashCommand {
     private async haveThemInviteRocketCatUser(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator()
                 .startMessage().setRoom(context.getRoom())
-                .setUsernameAlias('RC Status').setGroupable(false)
+                .setUsernameAlias('Houston Control').setGroupable(false)
                 .setText(`Please invite the @rocket.cat user. (\`/invite @rocket.cat\`)`);
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());

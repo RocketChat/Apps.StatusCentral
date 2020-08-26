@@ -1,7 +1,7 @@
-import { IIncidentUpdateModel } from '../models/incidentUpdate';
-import { IServiceModel } from '../models/service';
+import { IncidentUpdate } from '../models/incident-update';
+import { Service } from '../models/service';
 import { SettingsEnum } from './../enums/settings';
-import { IIncidentModel } from './../models/incident';
+import { Incident } from './../models/incident';
 import { RcStatusApp } from './../RcStatusApp';
 
 import { HttpStatusCode, IHttp, IHttpRequest, IRead } from '@rocket.chat/apps-engine/definition/accessors';
@@ -13,12 +13,15 @@ export class HttpWorker {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
         const useSsl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
 
+        this.app.getLogger().log(url);
+        this.app.getLogger().log(useSsl);
+
         const result = await http.get(`http${ useSsl ? 's' : '' }://${ url }/api/v1/config`);
 
         return result.statusCode === HttpStatusCode.OK;
     }
 
-    public async retrieveServices(read: IRead, http: IHttp): Promise<Array<IServiceModel>> {
+    public async retrieveServices(read: IRead, http: IHttp): Promise<Array<Service>> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
         const useSsl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
 
@@ -38,10 +41,10 @@ export class HttpWorker {
             }
         }
 
-        return result.data as Array<IServiceModel>;
+        return result.data as Array<Service>;
     }
 
-    public async createIncident(data: Partial<IIncidentModel>, read: IRead, http: IHttp): Promise<IIncidentModel> {
+    public async createIncident(data: Partial<Incident>, read: IRead, http: IHttp): Promise<Incident> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
         const useSsl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
 
@@ -63,10 +66,10 @@ export class HttpWorker {
             }
         }
 
-        return result.data as IIncidentModel;
+        return result.data as Incident;
     }
 
-    public async getIncident(id: string, read: IRead, http: IHttp): Promise<IIncidentModel> {
+    public async getIncident(id: string, read: IRead, http: IHttp): Promise<Incident> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
         const useSsl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
 
@@ -80,10 +83,10 @@ export class HttpWorker {
             throw new Error(`Failure to get the incident: ${ result.data.message } (${ result.statusCode })`);
         }
 
-        return result.data as IIncidentModel;
+        return result.data as Incident;
     }
 
-    public async createUpdate(id: number, update: Partial<IIncidentUpdateModel>, read: IRead, http: IHttp): Promise<IIncidentModel> {
+    public async createUpdate(id: number, update: Partial<IncidentUpdate>, read: IRead, http: IHttp): Promise<Incident> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
         const useSsl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
 
@@ -101,6 +104,6 @@ export class HttpWorker {
             throw new Error(`Failure to create the incident: ${ result.data.message } (${ result.statusCode })`);
         }
 
-        return result.data as IIncidentModel;
+        return result.data as Incident;
     }
 }

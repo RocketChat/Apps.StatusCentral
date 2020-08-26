@@ -11,7 +11,7 @@ import { RcStatusApp } from '../RcStatusApp';
 import { RoomUtility } from '../utils/rooms';
 import { UrlUtils } from '../utils/urls';
 import { UserUtility } from '../utils/users';
-import { IIncidentModel } from './../models/incident';
+import { Incident } from './../models/incident';
 
 export class IncidentUpdateWorker {
     private app: RcStatusApp;
@@ -29,7 +29,7 @@ export class IncidentUpdateWorker {
         if (existing.length > 0) {
             const msg = modify.getCreator().startMessage()
                 .setGroupable(false)
-                .setUsernameAlias('RC Status')
+                .setUsernameAlias('Houston Control')
                 .setRoom(context.getRoom())
                 .setText('You are already updating an incident. Please abort if you wish to start over.');
 
@@ -40,14 +40,14 @@ export class IncidentUpdateWorker {
         const id = context.getArguments()[1];
         this.app.getLogger().log(`Starting to update the incident with the id of: ${ id }`);
 
-        let incident: IIncidentModel;
+        let incident: Incident;
 
         try {
             incident = await this.app.getHttpWorker().getIncident(id, read, http);
         } catch {
             const msg = modify.getCreator().startMessage()
                 .setGroupable(false)
-                .setUsernameAlias('RC Status')
+                .setUsernameAlias('Houston Control')
                 .setRoom(context.getRoom())
                 .setText(`Failed to retrieve the incident by the id of \`${ id }\`. You sure it exists?`);
 
@@ -71,7 +71,7 @@ export class IncidentUpdateWorker {
                     .setText(`@${ context.getSender().username } has started an update for an incident.\n\nPlease select the status of the update:`)
                     .setRoom(context.getRoom())
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         const attach: IMessageAttachment = {
             color: '#00aaff',
@@ -131,7 +131,7 @@ export class IncidentUpdateWorker {
                     .setText('Now, please provide a message for the update the command `/incident explain <brief explanation of the update>`')
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         this.app.getLogger().log(mb.getMessage());
 
@@ -147,7 +147,7 @@ export class IncidentUpdateWorker {
         if (existing.length !== 1) {
             const msg = modify.getCreator().startMessage()
                 .setGroupable(false)
-                .setUsernameAlias('RC Status')
+                .setUsernameAlias('Houston Control')
                 .setRoom(context.getRoom())
                 .setText('You are not creating an incident update to explain.');
 
@@ -178,7 +178,7 @@ export class IncidentUpdateWorker {
                     .setText('Please review the incident update. Once you have reviewed, hit the publish button to make it live. :smile:')
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         const params = `?userId=${ data.userId }&roomId=${ data.roomId }`;
         const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
@@ -226,7 +226,7 @@ ${ JSON.stringify(data.update, null, 2) }
         const mb = modify.getCreator().startMessage()
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         let result = false;
         try {

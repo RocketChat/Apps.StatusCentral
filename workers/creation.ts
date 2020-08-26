@@ -4,7 +4,7 @@ import { StepEnum } from '../enums/step';
 import { RoomUtility } from '../utils/rooms';
 import { IncidentStatusEnum } from './../enums/incidentStatus';
 import { IContainer } from './../models/container';
-import { IIncidentUpdateModel } from './../models/incidentUpdate';
+import { IncidentUpdate } from '../models/incident-update';
 import { RcStatusApp } from './../RcStatusApp';
 import { UrlUtils } from './../utils/urls';
 import { UserUtility } from './../utils/users';
@@ -13,7 +13,7 @@ import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/de
 import { IMessageAttachment, MessageActionButtonsAlignment, MessageActionType , MessageProcessingType } from '@rocket.chat/apps-engine/definition/messages';
 import { RocketChatAssociationModel, RocketChatAssociationRecord } from '@rocket.chat/apps-engine/definition/metadata';
 import { SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
-import { IServiceModel } from '../models/service';
+import { Service } from '../models/service';
 
 export class IncidentCreationWorker {
     private app: RcStatusApp;
@@ -30,7 +30,7 @@ export class IncidentCreationWorker {
         if (existing.length > 0) {
             const msg = modify.getCreator().startMessage()
                 .setGroupable(false)
-                .setUsernameAlias('RC Status')
+                .setUsernameAlias('Houston Control')
                 .setRoom(context.getRoom())
                 .setText('You are already creating an incident. Please abort if you wish to start over.');
 
@@ -57,7 +57,7 @@ export class IncidentCreationWorker {
                     .setText(`@${ context.getSender().username } has started creating an incident.\n\nPlease select the status of the incident:`)
                     .setRoom(context.getRoom())
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         const attach: IMessageAttachment = {
             color: '#00aaff',
@@ -119,7 +119,7 @@ export class IncidentCreationWorker {
                     .setText('Now, please provide a description of the incident via the command `/incident describe <details>`')
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         const attach: IMessageAttachment = {
             color: '#a83c0e',
@@ -150,7 +150,7 @@ export class IncidentCreationWorker {
         if (existing.length !== 1) {
             const msg = modify.getCreator().startMessage()
                 .setGroupable(false)
-                .setUsernameAlias('RC Status')
+                .setUsernameAlias('Houston Control')
                 .setRoom(context.getRoom())
                 .setText('You are not creating an incident to describe.');
 
@@ -163,7 +163,7 @@ export class IncidentCreationWorker {
 
         this.app.getLogger().log(data);
 
-        const update: Partial<IIncidentUpdateModel> = {
+        const update: Partial<IncidentUpdate> = {
             time: data.data.time,
             status: data.data.status,
             message: context.getArguments().slice(1, context.getArguments().length).join(' '),
@@ -190,14 +190,14 @@ export class IncidentCreationWorker {
             return;
         }
 
-        let services: Array<IServiceModel>;
+        let services: Array<Service>;
         try {
             services = await this.app.getHttpWorker().retrieveServices(read, http);
         } catch (e) {
             const emb = modify.getCreator().startMessage()
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
             emb.setText(`
 Description set. Sadly, however, an error occured with the request to retrieve the services:
@@ -218,7 +218,7 @@ Maybe try again?
                     .setText('Description set. Now, it is time to select the services which are affected.')
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         // Attachment for the services
         const attach: IMessageAttachment = {
@@ -276,7 +276,7 @@ Maybe try again?
                     .setText('Please select the status for each service.')
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         const params = `?userId=${ data.userId }&roomId=${ data.roomId }`;
         const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
@@ -334,7 +334,7 @@ Maybe try again?
                     .setText('Please review the incident. Once you have reviewed, hit the publish button to make it live. :smile:')
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         const params = `?userId=${ data.userId }&roomId=${ data.roomId }`;
         const siteUrl = await read.getEnvironmentReader().getServerSettings().getValueById('Site_Url') as string;
@@ -381,7 +381,7 @@ ${ JSON.stringify(data.data, null, 2) }
         const mb = modify.getCreator().startMessage()
                     .setRoom(await RoomUtility.getRoom(read, data.roomId))
                     .setSender(await UserUtility.getRocketCatUser(read))
-                    .setUsernameAlias('RC Status');
+                    .setUsernameAlias('Houston Control');
 
         let result = false;
         try {
