@@ -1,15 +1,15 @@
 {
     "id": "c9c33437-8979-4b2c-ae6b-d0eb55d00a74",
-    "version": "1.3.1",
+    "version": "2.0.0-alpha",
     "requiredApiVersion": "^1.4.1",
     "iconFile": "icon.png",
     "author": {
-        "name": "Bradley Hilton",
+        "name": "Gustavo Dala Vechia",
         "homepage": "https://rocket.chat",
-        "support": "https://github.com/RocketChat/statuscentral/issues"
+        "support": "https://github.com/RocketChat/status-page-app"
     },
-    "name": "RC Status",
-    "nameSlug": "rc-status",
-    "classFile": "RcStatusApp.ts",
+    "name": "Houston Control",
+    "nameSlug": "houston-control",
+    "classFile": "houston-control.ts",
     "description": "The App which controls Rocket.Chat's Status Page."
 }

@@ -11,5 +11,10 @@
           "limit": 160,
           "ignore-pattern": "^import | *export .*? {"
       }]
-    }
+    },
+    "linterOptions": {
+      "exclude": [
+          "node_modules"
+      ]
+  }
   }
