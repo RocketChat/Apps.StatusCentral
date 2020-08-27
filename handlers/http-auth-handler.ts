@@ -5,9 +5,9 @@ import {
     IRead,
 } from '@rocket.chat/apps-engine/definition/accessors';
 
-import { SettingsEnum } from '../enums/settings';
+import { SettingsEnum } from '../models/enum/settings-enum';
 
-export class SettingToHttpHeader implements IHttpPreRequestHandler {
+export class HttpAuthHandler implements IHttpPreRequestHandler {
     public async executePreHttpRequest(url: string, request: IHttpRequest, read: IRead, persis: IPersistence): Promise<IHttpRequest> {
         const apiKey = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.API_KEY);
 

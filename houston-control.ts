@@ -1,16 +1,6 @@
-import { IncidentStatusApi } from './api/incident';
-import { ProcessStepperApi } from './api/process';
-import { ServiceSelectionApi } from './api/service';
-import { StatusSelectionApi } from './api/status';
-import { UpdateStatusApi } from './api/update';
-import { IncidentCommand } from './commands/IncidentCommand';
-import { SettingsEnum } from './enums/settings';
-import { SettingToHttpHeader } from './handlers/settingToHttpHeader';
-import { IncidentAbortWorker } from './workers/abort';
-import { IncidentCreationWorker } from './workers/creation';
-import { HttpWorker } from './workers/http';
-import { IncidentUpdateWorker } from './workers/update';
-
+import { IncidentCommand } from './commands/incident-command';
+import { SettingsEnum } from './models/enum/settings-enum';
+import { HttpAuthHandler } from './handlers/http-auth-handler';
 import {
     IConfigurationExtend,
     IConfigurationModify,
@@ -21,7 +11,6 @@ import {
     IPersistence,
     IRead,
 } from '@rocket.chat/apps-engine/definition/accessors';
-import { ApiSecurity, ApiVisibility } from '@rocket.chat/apps-engine/definition/api';
 import { App } from '@rocket.chat/apps-engine/definition/App';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import { ISetting, SettingType } from '@rocket.chat/apps-engine/definition/settings';
@@ -30,31 +19,39 @@ import {
     UIKitBlockInteractionContext,
     UIKitViewSubmitInteractionContext,
 } from '@rocket.chat/apps-engine/definition/uikit';
-import { IncidentsCreateView } from './view/incident/create-incident-view';
+import { IncidentCreateView } from './view/incident/create-incident-view';
+import { IncidentUpdateView } from './view/incident/update-incident-view';
 import { IncidentService } from './service/incident-service';
-import { CloudServicesService } from './service/cloud-services-service';
-import { IncidentStatusEnum } from './enums/incidentStatus';
-import { ServiceStatusEnum } from './enums/serviceStatus';
+import { ServiceService } from './service/service-service';
+import { ServiceStatusEnum } from './models/enum/service-status-enum';
+import { ConfigService } from './service/config-service';
+import { IncidentStatusEnum } from './models/enum/incident-status-enum';
 
-export class RcStatusApp extends App implements IUIKitInteractionHandler {
-    private hw: HttpWorker;
-    private iaw: IncidentAbortWorker;
-    private icw: IncidentCreationWorker;
-    private iuw: IncidentUpdateWorker;
+export class HoustonControl extends App implements IUIKitInteractionHandler {
+    private configService: ConfigService;
     private incidentService: IncidentService;
-    private cloudServicesService: CloudServicesService;
-    public incidentCreateView: IncidentsCreateView;
+    private servicesService: ServiceService;
 
+    private incidentCreateView: IncidentCreateView;
+    private incidentUpdateView: IncidentUpdateView; 
+    
     constructor(info: IAppInfo, logger: ILogger) {
         super(info, logger);
 
-        this.hw = new HttpWorker(this);
-        this.iaw = new IncidentAbortWorker();
-        this.icw = new IncidentCreationWorker(this);
-        this.iuw = new IncidentUpdateWorker(this);
+        this.configService = new ConfigService(logger);
         this.incidentService = new IncidentService(logger);
-        this.cloudServicesService = new CloudServicesService(logger);
-        this.incidentCreateView = new IncidentsCreateView(logger, this.incidentService);
+        this.servicesService = new ServiceService(logger);
+
+        this.incidentCreateView = new IncidentCreateView(logger, this.incidentService);
+        this.incidentUpdateView = new IncidentUpdateView(logger, this.incidentService);        
+    }
+
+    public getIncidentCreateView() {
+        return this.incidentCreateView;
+    }
+
+    public getIncidentUpdateView() {
+        return this.incidentUpdateView;
     }
 
     public async onEnable(er: IEnvironmentRead, cm: IConfigurationModify): Promise<boolean> {
@@ -72,16 +69,33 @@ export class RcStatusApp extends App implements IUIKitInteractionHandler {
         switch (data.view.id) {
             case 'incident_create_view': {
                 try {
-                    await this.incidentCreateView.onSubmitAsync(data.view.state, modify, read, http);
+                    await this.getIncidentCreateView().onSubmitAsync(data.view.state, modify, read, http);
                     return {
                         success: true,
                     };
                 } catch (err) {
-                    console.log(err);
-                    this.getLogger().log(err);
+                    this.getLogger().log(`An error occured during the incident creation. Error: ${err}`)
                     return context.getInteractionResponder().viewErrorResponse({
                         viewId: data.view.id,
-                        errors: err,
+                        errors: {
+                            vinc_title_input_value: 'An error occured during the incident creation. Please try again.'
+                        }
+                    });
+                }
+            }
+            case 'incident_update_view': {
+                try {
+                    await this.getIncidentUpdateView().onSubmitAsync(data.view.state, modify, read, http);
+                    return {
+                        success: true,
+                    };
+                } catch (err) {
+                    this.getLogger().log(`An error occured during the incident update. Error: ${err}`)
+                    return context.getInteractionResponder().viewErrorResponse({
+                        viewId: data.view.id,
+                        errors: {
+                            vinup_message_input_value: 'An error occured during the incident update. Please try again.'
+                        }
                     });
                 }
             }
@@ -98,15 +112,26 @@ export class RcStatusApp extends App implements IUIKitInteractionHandler {
         switch (data.actionId) {
             case 'vinc_services_multi_select': {
                 if (data.value) {
-                    const incidentStatus = Object.keys(IncidentStatusEnum).map((key) => ({id: key, name: IncidentStatusEnum[key]}));
-                    const cloudServices = await this.cloudServicesService.get(read, http);
-                    const cloudServiceStatus = Object.keys(ServiceStatusEnum).map((key) => ({id: key, name: ServiceStatusEnum[key]}));
-                    const cloudServicesSelected = <any> data.value
+                    const incidentStatuses = IncidentStatusEnum.getCollection();
+                    const services = await this.servicesService.get(read, http);
+                    const serviceStatuses = ServiceStatusEnum.getCollection();
+                    const servicesSelected = <any> data.value;
 
-                    this.incidentCreateView.setState(incidentStatus, cloudServices, cloudServicesSelected, cloudServiceStatus)
-                    return context.getInteractionResponder().updateModalViewResponse(await this.incidentCreateView.renderAsync(modify));
+                    this.incidentCreateView.setState(incidentStatuses, services, servicesSelected, serviceStatuses)
+                    return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentCreateView().renderAsync(modify));
                 }
             }
+            case 'vinup_services_multi_select': {
+                if (data.value) {
+                    const incidentStatuses = IncidentStatusEnum.getCollection();
+                    const services = await this.servicesService.get(read, http);
+                    const serviceStatuses = ServiceStatusEnum.getCollection();
+                    const servicesSelected = <any> data.value;
+
+                    this.getIncidentUpdateView().setState(incidentStatuses, services, servicesSelected, serviceStatuses)
+                    return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentUpdateView().renderAsync(modify));
+                }
+            }            
             default: {
                 return {
                     success: true,
@@ -117,7 +142,7 @@ export class RcStatusApp extends App implements IUIKitInteractionHandler {
     }
 
     public async initialize(configurationExtend: IConfigurationExtend): Promise<void> {
-        await configurationExtend.slashCommands.provideSlashCommand(new IncidentCommand(this, this.incidentService, this.cloudServicesService));
+        await configurationExtend.slashCommands.provideSlashCommand(new IncidentCommand(this, this.incidentService, this.servicesService));
 
         await configurationExtend.settings.provideSetting({
             id: SettingsEnum.SERVER_URL,
@@ -154,24 +179,12 @@ export class RcStatusApp extends App implements IUIKitInteractionHandler {
             type: SettingType.STRING,
             required: true,
             public: false,
-            packageValue: 'YkKZaT9DZPx6ELoMq',
+            packageValue: 'RLGbj6JTEWfqcYxZZ',
             i18nLabel: 'Room_Id',
             i18nDescription: 'Room_Id_Description',
         });
 
-        await configurationExtend.http.providePreRequestHandler(new SettingToHttpHeader());
-
-        await configurationExtend.api.provideApi({
-            visibility: ApiVisibility.PUBLIC,
-            security: ApiSecurity.UNSECURE,
-            endpoints: [
-                new ProcessStepperApi(this),
-                new IncidentStatusApi(this),
-                new ServiceSelectionApi(this),
-                new StatusSelectionApi(this),
-                new UpdateStatusApi(this),
-            ],
-        });
+        await configurationExtend.http.providePreRequestHandler(new HttpAuthHandler());
     }
 
     public async onSettingUpdated(setting: ISetting, cm: IConfigurationModify, read: IRead, http: IHttp): Promise<void> {
@@ -182,25 +195,9 @@ export class RcStatusApp extends App implements IUIKitInteractionHandler {
         }
     }
 
-    public getAbortWorker(): IncidentAbortWorker {
-        return this.iaw;
-    }
-
-    public getCreationWorker(): IncidentCreationWorker {
-        return this.icw;
-    }
-
-    public getUpdateWorker(): IncidentUpdateWorker {
-        return this.iuw;
-    }
-
-    public getHttpWorker(): HttpWorker {
-        return this.hw;
-    }
-
     private async handleApiKeySettingHandle(setting: ISetting, cm: IConfigurationModify, read: IRead, http: IHttp): Promise<void> {
         if (setting.value) {
-            if (await this.hw.testApi(read, http)) {
+            if (await this.configService.get(read, http)) {
                 this.getLogger().log('Enabling the slash command.');
                 await cm.slashCommands.enableSlashCommand('incident');
             } else {

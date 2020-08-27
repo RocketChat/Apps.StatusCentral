@@ -1,8 +1,8 @@
 import { HttpStatusCode, IHttp, IRead, ILogger } from '@rocket.chat/apps-engine/definition/accessors';
 import { Service } from "../models/service";
-import { SettingsEnum } from "../enums/settings";
+import { SettingsEnum } from "../models/enum/settings-enum";
 
-export class CloudServicesService {
+export class ServiceService {
     private logger: ILogger;
 
     constructor(logger: ILogger) {

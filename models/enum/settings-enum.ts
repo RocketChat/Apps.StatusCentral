@@ -1,3 +1,4 @@
+
 export enum SettingsEnum {
     SERVER_URL = 'server_url',
     SERVER_URL_USE_SLL = 'server_url_ssl',

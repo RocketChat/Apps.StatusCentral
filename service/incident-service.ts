@@ -1,4 +1,4 @@
-import { SettingsEnum } from '../enums/settings';
+import { SettingsEnum } from '../models/enum/settings-enum';
 import { Incident } from '../models/incident';
 import { HttpStatusCode, IHttp, IHttpRequest, IRead, ILogger } from '@rocket.chat/apps-engine/definition/accessors';
 import { IncidentUpdate } from '../models/incident-update';
@@ -17,14 +17,14 @@ export class IncidentService {
         const options: IHttpRequest = { data: incident };
         const result = await http.post(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/incidents`, options);
         if (!result) {
-            throw new Error(`Failure to create the incident, is the status page even up?`);
+            throw new Error(`Failure to create the incident in statuscentral. Check if the service is available.`);
         }
 
         if (result.statusCode !== HttpStatusCode.CREATED) {
             if (result.data && result.data.message) {
-                throw new Error(`Failure to create the incident: ${ result.data.message } (Status Code ${ result.statusCode })`);
+                throw new Error(`Failure to create the incident: ${ result.data.message } (status: ${ result.statusCode })`);
             } else {
-                throw new Error(`Failure to create the incident: "${ result.content }" (Status Code ${ result.statusCode })`);
+                throw new Error(`Failure to create the incident: "${ result.content }" (status: ${ result.statusCode })`);
             }
         }
 
@@ -36,13 +36,13 @@ export class IncidentService {
         const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
 
         const options: IHttpRequest = { data: incidentUpdate };
-        const result = await http.get(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/incidents/${ id }/updates`, options);
+        const result = await http.post(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/incidents/${ id }/updates`, options);
         if (!result) {
-            throw new Error(`Failure to create the incident update, is the status page even up?`);
+            throw new Error(`Failure to create the incident update in status central. Check if the service is available.`);
         }
 
         if (result.statusCode !== HttpStatusCode.CREATED) {
-            throw new Error(`Failure to create the incident: ${ result.data.message } (${ result.statusCode })`);
+            throw new Error(`Failure to create the incident update: ${ result.data.message } (status: ${ result.statusCode })`);
         }
 
         return <Incident> result.data;
@@ -54,11 +54,11 @@ export class IncidentService {
 
         const result = await http.get(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/incidents/${ id }`);
         if (!result) {
-            throw new Error(`Failure to retrieve the incident, is the status page even up?`);
+            throw new Error(`Failure to retrieve the incident from statuscentral. Check if the service is available.`);
         }
 
         if (result.statusCode !== HttpStatusCode.OK) {
-            throw new Error(`Failure to get the incident: ${ result.data.message } (${ result.statusCode })`);
+            throw new Error(`Failure to get the incident: ${ result.data.message } (status: ${ result.statusCode })`);
         }
 
         return <Incident> result.data;

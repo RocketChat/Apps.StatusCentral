@@ -10,6 +10,6 @@
     },
     "name": "Houston Control",
     "nameSlug": "houston-control",
-    "classFile": "RcStatusApp.ts",
+    "classFile": "houston-control.ts",
     "description": "The App which controls Rocket.Chat's Status Page."
 }

@@ -1,4 +1,4 @@
-import { IncidentStatusEnum } from './../enums/incidentStatus';
+import { IncidentStatusEnum } from './enum/incident-status-enum';
 import { IncidentUpdate } from './incident-update';
 import { Service } from './service';
 

@@ -5,29 +5,49 @@ import { IncidentService } from '../../service/incident-service';
 import { Incident } from '../../models/incident';
 import { UserUtility } from '../../utils/users';
 import { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
+import { EnumCollection } from '../../models/enum/enum-collection';
+import { ServiceStatusEnum } from '../../models/enum/service-status-enum';
+import { Service } from '../../models/service';
 
-class IncidentsCreateViewState {
+class IncidentCreateViewState {
     public room: IRoom;
-    public incidentStatus: any[]
-    public cloudServices: any[];
-    public cloudServicesSelected: any[];
-    public cloudServiceStatus: any[];
+    public incidentStatuses: EnumCollection<string>[];
+    public services: any[];
+    public servicesSelected: any[];
+    public serviceStatuses: EnumCollection<string>[]
 
-    constructor(room: IRoom, 
-        incidentStatus: any[], 
-        cloudServices: any[], 
-        cloudServicesSelected: any[], 
-        cloudServiceStatus: any[]) {
-        this.room = room;
-        this.incidentStatus = incidentStatus;
-        this.cloudServices = cloudServices;
-        this.cloudServicesSelected = cloudServicesSelected;
-        this.cloudServiceStatus = cloudServiceStatus;
+    public static create(): IncidentCreateViewState {
+        return new IncidentCreateViewState();
+    }
+
+    public withRoom(value: IRoom): IncidentCreateViewState {
+        this.room = value;
+        return this;
+    }
+
+    public withIncidentStatuses(value: EnumCollection<string>[]): IncidentCreateViewState {
+        this.incidentStatuses = value;
+        return this;
+    }
+
+    public withServices(value: Service[]): IncidentCreateViewState {
+        this.services = value;
+        return this;
+    }
+
+    public withServicesSelected(value: any[]): IncidentCreateViewState {
+        this.servicesSelected = value;
+        return this;
+    }
+
+    public withServiceStatuses(value: EnumCollection<string>[]): IncidentCreateViewState {
+        this.serviceStatuses = value;
+        return this;
     }
 }
 
-export class IncidentsCreateView {
-    private state: IncidentsCreateViewState;
+export class IncidentCreateView {
+    private state: IncidentCreateViewState;
     private logger: ILogger;
     private service: IncidentService;
 
@@ -42,7 +62,7 @@ export class IncidentsCreateView {
             .addInputBlock({
                 blockId: 'vinc_title_input',
                 element: block.newPlainTextInputElement({actionId: 'vinc_title_input_value'}),
-                label: block.newPlainTextObject('Inform the incident title')
+                label: block.newPlainTextObject('Inform the incident description')
             })
             .addSectionBlock({
                 text: block.newPlainTextObject('Inform the incident status')
@@ -53,8 +73,8 @@ export class IncidentsCreateView {
                     block.newStaticSelectElement({
                         placeholder: block.newPlainTextObject('Select the incident status'),
                         actionId: 'vinc_status_static_select',
-                        options: this.state.incidentStatus.map((status) => 
-                            <IOptionObject> { text: block.newPlainTextObject(status.name), value: status.id }),
+                        options: this.state.incidentStatuses.map((status) => 
+                            <IOptionObject> { text: block.newPlainTextObject(status.value), value: status.id }),
                     }),
                 ]
             })
@@ -68,17 +88,17 @@ export class IncidentsCreateView {
                     block.newMultiStaticElement({
                         placeholder: block.newPlainTextObject('Select the affected services'),
                         actionId: 'vinc_services_multi_select',
-                        options: this.state.cloudServices.map((service) => 
+                        options: this.state.services.map((service) => 
                             <IOptionObject> { text: block.newPlainTextObject(service.name), value: service.id }),
-                        initialValue: this.state.cloudServicesSelected,
+                        initialValue: this.state.servicesSelected,
                     }),
                 ]
             })
             .addDividerBlock()
 
         
-        this.state.cloudServicesSelected.forEach((id) => {
-            const serviceName = this.state.cloudServices.find((item) => item.id == id).name;
+        this.state.servicesSelected.forEach((id) => {
+            const serviceName = this.state.services.find((item) => item.id == id).name;
             block
                 .addSectionBlock({
                     text: block.newPlainTextObject(`Inform the ${serviceName} status`)
@@ -89,8 +109,8 @@ export class IncidentsCreateView {
                         block.newStaticSelectElement({
                             placeholder: block.newPlainTextObject(`Select the status`),
                             actionId: `vinc_services_${id}_status_static_select`,
-                            options: this.state.cloudServiceStatus.map((item) => 
-                                <IOptionObject> { text: block.newPlainTextObject(item.name), value: item.id })
+                            options: this.state.serviceStatuses.map((item) => 
+                                <IOptionObject> { text: block.newPlainTextObject(item.value), value: item.id })
                         })
                     ]
                 })
@@ -111,15 +131,25 @@ export class IncidentsCreateView {
         }
     }
 
-    public setState(incidentStatus: any[], 
-        cloudServices: any[], 
-        cloudServicesSelected: any[], 
-        cloudServiceStatus: any[],
+    public setState(incidentStatuses: EnumCollection<string>[], 
+        services: Service[], 
+        servicesSelected: any[], 
+        serviceStatuses: EnumCollection<string>[],
         room?: IRoom): void {
         if (room) {
-            this.state = new IncidentsCreateViewState(room, incidentStatus, cloudServices, cloudServicesSelected, cloudServiceStatus);
+            this.state = IncidentCreateViewState.create()
+                .withRoom(room)
+                .withIncidentStatuses(incidentStatuses)
+                .withServices(services)
+                .withServicesSelected(servicesSelected)
+                .withServiceStatuses(serviceStatuses);
         } else {
-            this.state = new IncidentsCreateViewState(this.state.room, incidentStatus, cloudServices, cloudServicesSelected, cloudServiceStatus);
+            this.state = IncidentCreateViewState.create()
+                .withRoom(this.state.room)
+                .withIncidentStatuses(incidentStatuses)
+                .withServices(services)
+                .withServicesSelected(servicesSelected)
+                .withServiceStatuses(serviceStatuses);
         }
     }
 
@@ -131,23 +161,23 @@ export class IncidentsCreateView {
             .withTitle(data['vinc_title_input']['vinc_title_input_value'])
             .withStatus(data['vinc_status_static']['vinc_status_static_select'])
             .withServices(data['vinc_services_multi']['vinc_services_multi_select'].map((index) => { 
-                let service = this.state.cloudServices[index - 1];
-                service.status = data[`vinc_services_${index}_status_static`][`vinc_services_${index}_status_static_select`];
+                let service = this.state.services[index - 1];
+                service.status = ServiceStatusEnum[data[`vinc_services_${index}_status_static`][`vinc_services_${index}_status_static_select`]];
                 return service;
             }));
         try {
             incident = await this.service.create(incident, read, http);
         
-            const messageText = `We have a new incident _(${incident.id})_: *${incident.status.toLocaleUpperCase()}*
+            const messageText = `We have a new incident *(${incident.id})*: *${incident.status.toLocaleUpperCase()}*
     
                 _*${incident.title}*_
-                *Services affected**:
-                    ${incident.services.map(service => ` _${service.name}_: *${service.status}*`)}
+                *Services affected**: 
+                ${incident.services.map(service => `- *${service.name}*: _${service.status}_ \n`)}
             `
             const message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
                 .setSender(await UserUtility.getRocketCatUser(read))
-                .setUsernameAlias('Houston')
+                .setUsernameAlias('Houston Control')
                 .setText(messageText)
     
             await modify.getCreator().finish(message);

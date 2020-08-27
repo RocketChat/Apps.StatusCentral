@@ -1,27 +1,28 @@
-import { SettingsEnum } from './../enums/settings';
-import { RcStatusApp } from './../RcStatusApp';
+import { SettingsEnum } from '../models/enum/settings-enum';
+import { HoustonControl } from '../houston-control';
 
 import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
 import { IncidentService } from '../service/incident-service';
-import { CloudServicesService } from '../service/cloud-services-service';
-import { IncidentStatusEnum } from '../enums/incidentStatus';
-import { ServiceStatusEnum } from '../enums/serviceStatus';
+import { ServiceService } from '../service/service-service';
+import { IncidentStatusEnum } from '../models/enum/incident-status-enum';
+import { ServiceStatusEnum } from '../models/enum/service-status-enum';
 
 export class IncidentCommand implements ISlashCommand {
+    private app: HoustonControl;
+    private incidentService: IncidentService;
+    private serviceService: ServiceService;
+
     public command = 'incident';
     public i18nParamsExample = 'Incident_Command_Params_Example';
     public i18nDescription = 'Incident_Command_Description';
     public permission = 'view-logs';
     public providesPreview = false;
-    private app: RcStatusApp;
-    private incidentService: IncidentService;
-    private cloudServicesService: CloudServicesService;
 
-    constructor(app: RcStatusApp, incidentService: IncidentService, cloudServicesService: CloudServicesService) {
+    constructor(app: HoustonControl, incidentService: IncidentService, serviceService: ServiceService) {
         this.app = app;
         this.incidentService = incidentService;
-        this.cloudServicesService = cloudServicesService;
+        this.serviceService = serviceService;
     }
 
     public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
@@ -46,6 +47,8 @@ export class IncidentCommand implements ISlashCommand {
                 return this.handleNoArguments(context, read, modify, http);
             case 1:
                 return this.handleOneArgument(context, read, modify, http);
+            case 2:
+                return this.handleTwoArguments(context, read, modify, http);
             default:
                 return this.handleNoArguments(context, read, modify, http);
         }
@@ -71,12 +74,12 @@ export class IncidentCommand implements ISlashCommand {
                 const triggerId = context.getTriggerId();
                 if (triggerId) {
                     try {
-                        const incidentStatus = Object.keys(IncidentStatusEnum).map((key) => ({id: key, name: IncidentStatusEnum[key]}));
-                        const cloudServices = await this.cloudServicesService.get(read, http);
-                        const cloudServiceStatus = Object.keys(ServiceStatusEnum).map((key) => ({id: key, name: ServiceStatusEnum[key]}));
+                        const incidentStatuses = IncidentStatusEnum.getCollection();
+                        const services = await this.serviceService.get(read, http);
+                        const servicesStatuses = ServiceStatusEnum.getCollection();
     
-                        this.app.incidentCreateView.setState(incidentStatus, cloudServices, [], cloudServiceStatus, context.getRoom());
-                        const view = await this.app.incidentCreateView.renderAsync(modify);
+                        this.app.getIncidentCreateView().setState(incidentStatuses, services, [], servicesStatuses, context.getRoom());
+                        const view = await this.app.getIncidentCreateView().renderAsync(modify);
                         return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());    
                     } catch (err) {
                         this.app.getLogger().log(`An error occured during the incident creation request. Error: ${err}`);
@@ -103,24 +106,56 @@ export class IncidentCommand implements ISlashCommand {
         await modify.getNotifier().notifyUser(context.getSender(), message.getMessage());
     }
 
-    /*
-    private async handleTwoArguments(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
+    private async handleTwoArguments(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp): Promise<void> {
+        let message = modify.getCreator().startMessage()
+            .setRoom(context.getRoom())
+            .setUsernameAlias('Houston Control')
+            .setGroupable(false);
+
         switch (context.getArguments()[0].toLowerCase()) {
             case 'create':
-            case 'explain':
-                return this.handleEverythingElse(context, read, modify, http, persis);
-            case 'update':
-                return this.app.getUpdateWorker().start(context, read, modify, http, persis);
-            case 'remove':
-                this.app.getLogger().log(context.getArguments().join(' '));
+                message = message.setText('Invalid syntax. Create uses: `/incident create`');
                 break;
-            case 'abort':
-                return this.handleOneArgument(context, read, modify, http, persis);
+            case 'update':
+                const triggerId = context.getTriggerId();
+                if (triggerId) {
+                    const incidentID = context.getArguments()[1].toLowerCase();
+                    try {
+                        await this.incidentService.get(incidentID, read, http);
+                    } catch (err) {
+                        this.app.getLogger().log(`An error occured during search for incident with id ${incidentID}. Error: ${err}`);
+                        message = message.setText('Please inform an valid incident identifier');
+                        break;                        
+                    }
+                    try {                        
+                        const incidentStatuses = IncidentStatusEnum.getCollection();
+                        const services = await this.serviceService.get(read, http);
+                        const servicesStatuses = ServiceStatusEnum.getCollection();
+    
+                        this.app.getIncidentUpdateView().setState(incidentStatuses, services, [], servicesStatuses, context.getRoom(), Number(incidentID));
+                        const view = await this.app.getIncidentUpdateView().renderAsync(modify);
+                        return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());    
+                    } catch (err) {
+                        this.app.getLogger().log(`An error occured during the incident update request. Error: ${err}`);
+                        message = message.setText('An error occured during the incident update request. Please, try again later');
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            case 'close':
+                message = message.setText('Invalid syntax. Close uses: `/incident close <id of incident>`');
+                break;
             default:
-                return this.handleNoArguments(context, modify);
+                message = modify.getCreator().startMessage()
+                    .setGroupable(false)
+                    .setRoom(context.getRoom())
+                    .setUsernameAlias('Houston Control')
+                    .setText('Invalid syntax. Use: `/incident <create|update|close>`');
         }
+
+        await modify.getNotifier().notifyUser(context.getSender(), message.getMessage());
     }
-    */
 
     private async handleIncorrectRoom(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator()

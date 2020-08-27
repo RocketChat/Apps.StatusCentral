@@ -1,4 +1,4 @@
-import { ServiceStatusEnum } from './../enums/serviceStatus';
+import { ServiceStatusEnum } from './enum/service-status-enum';
 
 export class Service {
     public id: number;
