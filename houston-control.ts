@@ -21,6 +21,7 @@ import {
 } from '@rocket.chat/apps-engine/definition/uikit';
 import { IncidentCreateView } from './view/incident/create-incident-view';
 import { IncidentUpdateView } from './view/incident/update-incident-view';
+import { IncidentCloseView } from './view/incident/close-incident-view';
 import { IncidentService } from './service/incident-service';
 import { ServiceService } from './service/service-service';
 import { ServiceStatusEnum } from './models/enum/service-status-enum';
@@ -34,6 +35,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
 
     private incidentCreateView: IncidentCreateView;
     private incidentUpdateView: IncidentUpdateView; 
+    private incidentCloseView: IncidentCloseView;
     
     constructor(info: IAppInfo, logger: ILogger) {
         super(info, logger);
@@ -43,7 +45,8 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
         this.servicesService = new ServiceService(logger);
 
         this.incidentCreateView = new IncidentCreateView(logger, this.incidentService);
-        this.incidentUpdateView = new IncidentUpdateView(logger, this.incidentService);        
+        this.incidentUpdateView = new IncidentUpdateView(logger, this.incidentService);   
+        this.incidentCloseView = new IncidentCloseView(logger, this.incidentService);     
     }
 
     public getIncidentCreateView() {
@@ -52,6 +55,10 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
 
     public getIncidentUpdateView() {
         return this.incidentUpdateView;
+    }
+
+    public getIncidentCloseView() {
+        return this.incidentCloseView;
     }
 
     public async onEnable(er: IEnvironmentRead, cm: IConfigurationModify): Promise<boolean> {
@@ -95,6 +102,22 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
                         viewId: data.view.id,
                         errors: {
                             vinup_message_input_value: 'An error occured during the incident update. Please try again.'
+                        }
+                    });
+                }
+            }
+            case 'incident_close_view': {
+                try {
+                    await this.getIncidentCloseView().onSubmitAsync(data.view.state, modify, read, http);
+                    return {
+                        success: true,
+                    };
+                } catch (err) {
+                    this.getLogger().log(`An error occured during the incident closing. Error: ${err}`)
+                    return context.getInteractionResponder().viewErrorResponse({
+                        viewId: data.view.id,
+                        errors: {
+                            vinup_message_input_value: 'An error occured during the incident closing. Please try again.'
                         }
                     });
                 }

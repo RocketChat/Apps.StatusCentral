@@ -116,15 +116,16 @@ export class IncidentCommand implements ISlashCommand {
             case 'create':
                 message = message.setText('Invalid syntax. Create uses: `/incident create`');
                 break;
-            case 'update':
+            case 'update': {
                 const triggerId = context.getTriggerId();
                 if (triggerId) {
                     const incidentID = context.getArguments()[1].toLowerCase();
                     try {
-                        await this.incidentService.get(incidentID, read, http);
+                        const incident = await this.incidentService.get(incidentID, read, http);
+                        console.log(incident);
                     } catch (err) {
                         this.app.getLogger().log(`An error occured during search for incident with id ${incidentID}. Error: ${err}`);
-                        message = message.setText('Please inform an valid incident identifier');
+                        message = message.setText('Please inform a valid incident');
                         break;                        
                     }
                     try {                        
@@ -143,9 +144,33 @@ export class IncidentCommand implements ISlashCommand {
                 } else {
                     break;
                 }
-            case 'close':
-                message = message.setText('Invalid syntax. Close uses: `/incident close <id of incident>`');
-                break;
+            }
+            case 'close': {
+                const triggerId = context.getTriggerId();
+                if (triggerId) {
+                    const incidentID = context.getArguments()[1].toLowerCase();
+                    try {
+                        const incident = await this.incidentService.get(incidentID, read, http);
+                        console.log(incident);
+                        try {                        
+                            this.app.getIncidentCloseView().setState(incident, context.getRoom());
+                            const view = await this.app.getIncidentCloseView().renderAsync(modify);
+                            return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());    
+                        } catch (err) {
+                            this.app.getLogger().log(`An error occured during the incident close request. Error: ${err}`);
+                            message = message.setText('An error occured during the incident close request. Please, try again later');
+                            break;
+                        }
+                    } catch (err) {
+                        this.app.getLogger().log(`An error occured during search for incident with id ${incidentID}. Error: ${err}`);
+                        message = message.setText('Please inform a valid incident');
+                        break;                        
+                    }
+
+                } else {
+                    break;
+                }
+            }
             default:
                 message = modify.getCreator().startMessage()
                     .setGroupable(false)

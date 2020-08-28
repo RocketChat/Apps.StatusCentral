@@ -7,6 +7,6 @@
     "Api_Key_Description": "The API Key which is valid for the status server.",
     "Room_Id": "Room ID",
     "Room_Id_Description": "The id of the room which incidents will be created in.",
-    "Incident_Command_Params_Example": "<create|describe|update|explain|remove|abort>",
-    "Incident_Command_Description": "creates new incidents in the Rocket.Chat status"
+    "Incident_Command_Params_Example": "<create|update|close>",
+    "Incident_Command_Description": "Manages incidents related to Rocket.Chat services"
 }
