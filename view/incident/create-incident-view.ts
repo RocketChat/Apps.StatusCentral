@@ -10,6 +10,7 @@ import { Service } from '../../models/service';
 import { IUser } from '@rocket.chat/apps-engine/definition/users';
 
 class IncidentCreateViewState {
+    public appName: string;
     public room: IRoom;
     public roomUsers: IUser[];
     public roomUsersSelected: any[];
@@ -21,6 +22,11 @@ class IncidentCreateViewState {
 
     public static create(): IncidentCreateViewState {
         return new IncidentCreateViewState();
+    }
+
+    public withAppName(value: string): IncidentCreateViewState {
+        this.appName = value;
+        return this;
     }
 
     public withRoom(value: IRoom): IncidentCreateViewState {
@@ -166,13 +172,15 @@ export class IncidentCreateView {
         }
     }
 
-    public setInitialState(incidentStatuses: EnumCollection<string>[], 
+    public setInitialState(appName: string,
+        incidentStatuses: EnumCollection<string>[], 
         services: Service[], 
         serviceStatuses: EnumCollection<string>[],
         room: IRoom,
         roomUsers: IUser[],
         user: IUser): void {
         this.state = IncidentCreateViewState.create()
+            .withAppName(appName)
             .withRoom(room)
             .withRoomUsers(roomUsers)
             .withUser(user)
@@ -184,6 +192,7 @@ export class IncidentCreateView {
     public setState(servicesSelected?: any[], roomUsersSelected?: any[]): void {
         if (servicesSelected) {
             this.state = IncidentCreateViewState.create()
+                .withAppName(this.state.appName)
                 .withRoom(this.state.room)
                 .withRoomUsers(this.state.roomUsers)
                 .withRoomUsersSelected(this.state.roomUsersSelected)
@@ -195,6 +204,7 @@ export class IncidentCreateView {
         } 
         if (roomUsersSelected) {
             this.state = IncidentCreateViewState.create()
+                .withAppName(this.state.appName)
                 .withRoom(this.state.room)
                 .withRoomUsers(this.state.roomUsers)
                 .withRoomUsersSelected(roomUsersSelected)
@@ -233,7 +243,7 @@ export class IncidentCreateView {
             const message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
                 .setSender(await read.getUserReader().getByUsername('rocket.cat'))
-                .setUsernameAlias('Houston Control')
+                .setUsernameAlias(this.state.appName)
                 .setGroupable(false)
                 .setText(messageText);
             await modify.getCreator().finish(message);
@@ -242,7 +252,7 @@ export class IncidentCreateView {
         } catch (err) {
             let alert = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
-                .setUsernameAlias('Houston Control')
+                .setUsernameAlias(this.state.appName)
                 .setGroupable(false)
                 .setText('An error occured during the incident creation. Please, try again later');
             await modify.getNotifier().notifyRoom(this.state.room, alert.getMessage());

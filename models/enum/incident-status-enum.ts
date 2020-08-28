@@ -14,4 +14,3 @@ export namespace IncidentStatusEnum {
         return Object.keys(IncidentStatusEnum).map((key) => new EnumCollection(key, IncidentStatusEnum[key]));
     }
 }
-

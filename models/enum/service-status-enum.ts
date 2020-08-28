@@ -3,7 +3,7 @@ import { EnumCollection } from "./enum-collection";
 export enum ServiceStatusEnum {
     Operational = 'Operational',
     Degraded = 'Degraded',
-    PartialOutage = 'Partial Outage',
+    PartialOutage = 'Partial-outage',
     Outage = 'Outage',
     ScheduledMaintenance = 'Scheduled Maintenance',
     Unknown = 'Unknown',
@@ -14,4 +14,3 @@ export namespace ServiceStatusEnum {
         return Object.keys(ServiceStatusEnum).map((key) => new EnumCollection(key, ServiceStatusEnum[key]));
     }
 }
-

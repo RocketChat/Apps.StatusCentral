@@ -56,7 +56,7 @@ export class IncidentCommand implements ISlashCommand {
         const message = modify.getCreator().startMessage()
             .setGroupable(false)
             .setRoom(context.getRoom())
-            .setUsernameAlias('Houston Control')
+            .setUsernameAlias(this.app.getName())
             .setText('Invalid syntax. Use: `/incident <create|update|close>`');
         await modify.getNotifier().notifyUser(context.getSender(), message.getMessage());
     }
@@ -64,7 +64,7 @@ export class IncidentCommand implements ISlashCommand {
     private async handleOneArgument(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp): Promise<void> {
         let message = modify.getCreator().startMessage()
             .setRoom(context.getRoom())
-            .setUsernameAlias('Houston Control')
+            .setUsernameAlias(this.app.getName())
             .setGroupable(false);
 
         switch (context.getArguments()[0].toLowerCase()) {
@@ -79,7 +79,8 @@ export class IncidentCommand implements ISlashCommand {
                         const roomUsers = await read.getRoomReader().getMembers(context.getRoom().id);
                         const user = context.getSender();
 
-                        this.app.getIncidentCreateView().setInitialState(incidentStatuses,
+                        this.app.getIncidentCreateView().setInitialState(this.app.getName(),
+                            incidentStatuses,
                             services,
                             servicesStatuses,
                             room,
@@ -105,7 +106,7 @@ export class IncidentCommand implements ISlashCommand {
                 message = modify.getCreator().startMessage()
                     .setGroupable(false)
                     .setRoom(context.getRoom())
-                    .setUsernameAlias('Houston Control')
+                    .setUsernameAlias(this.app.getName())
                     .setText('Invalid syntax. Use: `/incident <create|update|close>`');
         }
 
@@ -115,7 +116,7 @@ export class IncidentCommand implements ISlashCommand {
     private async handleTwoArguments(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp): Promise<void> {
         let message = modify.getCreator().startMessage()
             .setRoom(context.getRoom())
-            .setUsernameAlias('Houston Control')
+            .setUsernameAlias(this.app.getName())
             .setGroupable(false);
 
         switch (context.getArguments()[0].toLowerCase()) {
@@ -138,7 +139,8 @@ export class IncidentCommand implements ISlashCommand {
                         const services = await this.serviceService.get(read, http);
                         const servicesStatuses = ServiceStatusEnum.getCollection();
 
-                        this.app.getIncidentUpdateView().setInitialState(Number(incidentID),
+                        this.app.getIncidentUpdateView().setInitialState(this.app.getName(),
+                            Number(incidentID),
                             incidentStatuses,
                             services,
                             servicesStatuses,
@@ -162,7 +164,10 @@ export class IncidentCommand implements ISlashCommand {
                     try {
                         const incident = await this.incidentService.get(incidentID, read, http);
                         try {
-                            this.app.getIncidentCloseView().setInitialState(incident, context.getRoom(), context.getSender());
+                            this.app.getIncidentCloseView().setInitialState(this.app.getName(),
+                                incident,
+                                context.getRoom(),
+                                context.getSender());
                             const view = await this.app.getIncidentCloseView().renderAsync(modify);
                             return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());
                         } catch (err) {
@@ -183,7 +188,7 @@ export class IncidentCommand implements ISlashCommand {
                 message = modify.getCreator().startMessage()
                     .setGroupable(false)
                     .setRoom(context.getRoom())
-                    .setUsernameAlias('Houston Control')
+                    .setUsernameAlias(this.app.getName())
                     .setText('Invalid syntax. Use: `/incident <create|update|close>`');
         }
 
@@ -193,7 +198,7 @@ export class IncidentCommand implements ISlashCommand {
     private async handleIncorrectRoom(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator()
                 .startMessage().setRoom(context.getRoom())
-                .setUsernameAlias('Houston Control').setGroupable(false)
+                .setUsernameAlias(this.app.getName()).setGroupable(false)
                 .setText(`Unexpected room. The room you're in (\`${ context.getRoom().id }\`) is not the expected room.`);
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
@@ -202,7 +207,7 @@ export class IncidentCommand implements ISlashCommand {
     private async haveThemInviteRocketCatUser(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator()
                 .startMessage().setRoom(context.getRoom())
-                .setUsernameAlias('Houston Control').setGroupable(false)
+                .setUsernameAlias(this.app.getName()).setGroupable(false)
                 .setText(`Please invite the @rocket.cat user. (\`/invite @rocket.cat\`)`);
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());

@@ -8,12 +8,18 @@ import { IncidentStatusEnum } from "../../models/enum/incident-status-enum";
 import { IUser } from "@rocket.chat/apps-engine/definition/users";
 
 class IncidentCloseViewState {
+    public appName: string;
     public incident: Incident;
     public room: IRoom;
     public user: IUser;
 
     public static create(): IncidentCloseViewState {
         return new IncidentCloseViewState();
+    }
+
+    public withAppName(value: string): IncidentCloseViewState {
+        this.appName = value;
+        return this;
     }
 
     public withIncident(value: Incident): IncidentCloseViewState {
@@ -96,8 +102,9 @@ export class IncidentCloseView {
         }
     }
 
-    public setInitialState(incident: Incident, room: IRoom, user: IUser) {
+    public setInitialState(appName: string, incident: Incident, room: IRoom, user: IUser) {
         this.state = IncidentCloseViewState.create()
+            .withAppName(appName)
             .withIncident(incident)
             .withRoom(room)
             .withUser(user);
@@ -133,7 +140,7 @@ export class IncidentCloseView {
             const message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
                 .setSender(await read.getUserReader().getByUsername('rocket.cat'))
-                .setUsernameAlias('Houston Control')
+                .setUsernameAlias(this.state.appName)
                 .setText(messageText);
             await modify.getCreator().finish(message);
 
@@ -141,7 +148,7 @@ export class IncidentCloseView {
         } catch (err) {
             let alert = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
-                .setUsernameAlias('Houston Control')
+                .setUsernameAlias(this.state.appName)
                 .setGroupable(false)
                 .setText('An error occured during the incident update. Please, try again later');
             await modify.getNotifier().notifyRoom(this.state.room, alert.getMessage());

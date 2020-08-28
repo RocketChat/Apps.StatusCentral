@@ -10,6 +10,7 @@ import { Service } from "../../models/service";
 import { IUser } from "@rocket.chat/apps-engine/definition/users";
 
 class IncidentUpdateViewState {
+    public appName: string;
     public room: IRoom;
     public user: IUser;
     public incidentID: number;
@@ -20,6 +21,11 @@ class IncidentUpdateViewState {
 
     public static create(): IncidentUpdateViewState {
         return new IncidentUpdateViewState();
+    }
+
+    public withAppName(value: string): IncidentUpdateViewState {
+        this.appName = value;
+        return this;
     }
 
     public withRoom(value: IRoom): IncidentUpdateViewState {
@@ -144,13 +150,15 @@ export class IncidentUpdateView {
         }
     }
 
-    public setInitialState(incidentID: number,
+    public setInitialState(appName: string,
+        incidentID: number,
         incidentStatuses: EnumCollection<string>[],
         services: Service[],
         servicesStatuses: EnumCollection<string>[],
         room: IRoom,
         user: IUser): void {
         this.state = IncidentUpdateViewState.create()
+            .withAppName(appName)
             .withIncidentId(incidentID)
             .withIncidentStatuses(incidentStatuses)
             .withRoom(room)
@@ -161,6 +169,7 @@ export class IncidentUpdateView {
 
     public setState(servicesSelected: any[]) {
         this.state = IncidentUpdateViewState.create()
+            .withAppName(this.state.appName)
             .withIncidentId(this.state.incidentID)
             .withIncidentStatuses(this.state.incidentStatuses)
             .withRoom(this.state.room)
@@ -200,7 +209,7 @@ export class IncidentUpdateView {
             const message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
                 .setSender(await read.getUserReader().getByUsername('rocket.cat'))
-                .setUsernameAlias('Houston Control')
+                .setUsernameAlias(this.state.appName)
                 .setText(messageText)
     
             await modify.getCreator().finish(message);
@@ -208,7 +217,7 @@ export class IncidentUpdateView {
         } catch (err) {
             let alert = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
-                .setUsernameAlias('Houston Control')
+                .setUsernameAlias(this.state.appName)
                 .setGroupable(false)
                 .setText('An error occured during the incident update. Please, try again later');
             await modify.getNotifier().notifyRoom(this.state.room, alert.getMessage());

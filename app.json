@@ -1,10 +1,10 @@
 {
     "id": "c9c33437-8979-4b2c-ae6b-d0eb55d00a74",
     "version": "2.0.0-alpha",
-    "requiredApiVersion": "^1.4.1",
+    "requiredApiVersion": "^1.16.0",
     "iconFile": "icon.png",
     "author": {
-        "name": "Gustavo Dala Vechia",
+        "name": "Rocket.Chat Cloud Team",
         "homepage": "https://rocket.chat",
         "support": "https://github.com/RocketChat/status-page-app"
     },
