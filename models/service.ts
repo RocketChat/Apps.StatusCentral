@@ -1,6 +1,10 @@
 import { ServiceStatusEnum } from './enum/service-status-enum';
 
 export class Service {
+    public static create(): Service {
+        return new Service();
+    }
+
     public id: number;
     public name: string;
     public status: ServiceStatusEnum;
@@ -10,10 +14,6 @@ export class Service {
     public tags: Array<string>;
     public enabled: boolean;
     public updatedAt: Date;
-
-    public static create(): Service {
-        return new Service();
-    }
 
     public withId(value: number): Service {
         this.id = value;

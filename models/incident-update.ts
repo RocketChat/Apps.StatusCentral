@@ -2,15 +2,15 @@ import { IncidentStatusEnum } from './enum/incident-status-enum';
 import { Service } from './service';
 
 export class IncidentUpdate {
+    public static create(): IncidentUpdate {
+        return new IncidentUpdate();
+    }
+
     public id: number;
     public time: Date;
     public status: IncidentStatusEnum;
     public message: string;
     public services: Array<Partial<Service>>;
-
-    public static create(): IncidentUpdate {
-        return new IncidentUpdate();
-    }
 
     public withId(value: number): IncidentUpdate {
         this.id = value;

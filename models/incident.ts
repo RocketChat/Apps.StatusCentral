@@ -3,6 +3,10 @@ import { IncidentUpdate } from './incident-update';
 import { Service } from './service';
 
 export class Incident {
+    public static create(): Incident {
+        return new Incident();
+    }
+
     public id: number;
     public time: Date;
     public title: string;
@@ -10,10 +14,6 @@ export class Incident {
     public services: Array<Partial<Service>>;
     public updates: Array<Partial<IncidentUpdate>>;
     public updatedAt: Date;
-
-    public static create(): Incident {
-        return new Incident();
-    }
 
     public withId(value: number): Incident {
         this.id = value;

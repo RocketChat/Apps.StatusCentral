@@ -24,9 +24,7 @@ import { IncidentUpdateView } from './view/incident/update-incident-view';
 import { IncidentCloseView } from './view/incident/close-incident-view';
 import { IncidentService } from './service/incident-service';
 import { ServiceService } from './service/service-service';
-import { ServiceStatusEnum } from './models/enum/service-status-enum';
 import { ConfigService } from './service/config-service';
-import { IncidentStatusEnum } from './models/enum/incident-status-enum';
 
 export class HoustonControl extends App implements IUIKitInteractionHandler {
     private configService: ConfigService;
@@ -135,23 +133,22 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
         switch (data.actionId) {
             case 'vinc_services_multi_select': {
                 if (data.value) {
-                    const incidentStatuses = IncidentStatusEnum.getCollection();
-                    const services = await this.servicesService.get(read, http);
-                    const serviceStatuses = ServiceStatusEnum.getCollection();
                     const servicesSelected = <any> data.value;
-
-                    this.incidentCreateView.setState(incidentStatuses, services, servicesSelected, serviceStatuses)
+                    this.incidentCreateView.setState(servicesSelected);
+                    return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentCreateView().renderAsync(modify));
+                }
+            }
+            case 'vinc_users_multi_select': {
+                if (data.value) {
+                    const roomUsersSelected = <any> data.value;
+                    this.incidentCreateView.setState(undefined, roomUsersSelected);
                     return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentCreateView().renderAsync(modify));
                 }
             }
             case 'vinup_services_multi_select': {
                 if (data.value) {
-                    const incidentStatuses = IncidentStatusEnum.getCollection();
-                    const services = await this.servicesService.get(read, http);
-                    const serviceStatuses = ServiceStatusEnum.getCollection();
                     const servicesSelected = <any> data.value;
-
-                    this.getIncidentUpdateView().setState(incidentStatuses, services, servicesSelected, serviceStatuses)
+                    this.getIncidentUpdateView().setState(servicesSelected);
                     return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentUpdateView().renderAsync(modify));
                 }
             }            
@@ -172,7 +169,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
             type: SettingType.STRING,
             required: true,
             public: false,
-            packageValue: 'statuscentral:5050',
+            packageValue: 'status.rocket.chat',
             i18nLabel: 'Server_Url',
             i18nDescription: 'Server_Url_Description',
         });
@@ -182,7 +179,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
             type: SettingType.BOOLEAN,
             required: true,
             public: false,
-            packageValue: false,
+            packageValue: true,
             i18nLabel: 'Server_Url_Ssl',
             i18nDescription: 'Server_Url_Ssl_Description',
         });
@@ -192,7 +189,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
             type: SettingType.STRING,
             required: true,
             public: false,
-            packageValue: 'abc123def456',
+            packageValue: '',
             i18nLabel: 'Api_Key',
             i18nDescription: 'Api_Key_Description',
         });
@@ -202,7 +199,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
             type: SettingType.STRING,
             required: true,
             public: false,
-            packageValue: 'RLGbj6JTEWfqcYxZZ',
+            packageValue: '',
             i18nLabel: 'Room_Id',
             i18nDescription: 'Room_Id_Description',
         });

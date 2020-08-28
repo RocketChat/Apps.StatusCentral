@@ -1,6 +1,6 @@
+import { HttpStatusCode, IHttp, IHttpRequest, ILogger, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { SettingsEnum } from '../models/enum/settings-enum';
 import { Incident } from '../models/incident';
-import { HttpStatusCode, IHttp, IHttpRequest, IRead, ILogger } from '@rocket.chat/apps-engine/definition/accessors';
 import { IncidentUpdate } from '../models/incident-update';
 
 export class IncidentService {
@@ -28,7 +28,7 @@ export class IncidentService {
             }
         }
 
-        return <Incident> result.data;
+        return result.data as Incident;
     }
 
     public async createUpdate(id: number, incidentUpdate: Partial<IncidentUpdate>, read: IRead, http: IHttp): Promise<Incident> {
@@ -45,7 +45,7 @@ export class IncidentService {
             throw new Error(`Failure to create the incident update: ${ result.data.message } (status: ${ result.statusCode })`);
         }
 
-        return <Incident> result.data;
+        return result.data as Incident;
     }
 
     public async get(id: string, read: IRead, http: IHttp): Promise<Incident> {
@@ -61,6 +61,6 @@ export class IncidentService {
             throw new Error(`Failure to get the incident: ${ result.data.message } (status: ${ result.statusCode })`);
         }
 
-        return <Incident> result.data;
+        return result.data as Incident;
     }
 }

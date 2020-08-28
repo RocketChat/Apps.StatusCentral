@@ -1,12 +1,12 @@
-import { HttpStatusCode, IHttp, IRead, ILogger } from '@rocket.chat/apps-engine/definition/accessors';
-import { SettingsEnum } from "../models/enum/settings-enum";
+import { HttpStatusCode, IHttp, ILogger, IRead } from '@rocket.chat/apps-engine/definition/accessors';
+import { SettingsEnum } from '../models/enum/settings-enum';
 
 export class ConfigService {
     private logger: ILogger;
 
     constructor(logger: ILogger) {
         this.logger = logger;
-    } 
+    }
 
     public async get(read: IRead, http: IHttp): Promise<boolean> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);

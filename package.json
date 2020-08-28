@@ -1,6 +1,7 @@
 {
     "scripts": {
-        "deploy": "rc-apps deploy -u gustavo.vechia -p Qnj6NgYcBAZBN --url http://localhost:3000"
+        "deploy": "rc-apps deploy -u gustavo.vechia -p Qnj6NgYcBAZBN --url http://localhost:3000",
+        "lint": "tslint -c tslint.json */*.ts"
     },
     "devDependencies": {
         "@rocket.chat/apps-engine": "^1.16.0",

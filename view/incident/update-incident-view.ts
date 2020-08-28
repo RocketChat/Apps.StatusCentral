@@ -5,12 +5,13 @@ import { IUIKitModalViewParam } from "@rocket.chat/apps-engine/definition/uikit/
 import { IOptionObject } from "@rocket.chat/apps-engine/definition/uikit";
 import { EnumCollection } from "../../models/enum/enum-collection";
 import { IncidentUpdate } from "../../models/incident-update";
-import { UserUtility } from "../../utils/users";
 import { ServiceStatusEnum } from "../../models/enum/service-status-enum";
 import { Service } from "../../models/service";
+import { IUser } from "@rocket.chat/apps-engine/definition/users";
 
 class IncidentUpdateViewState {
     public room: IRoom;
+    public user: IUser;
     public incidentID: number;
     public incidentStatuses: EnumCollection<string>[];
     public services: any[];
@@ -23,6 +24,11 @@ class IncidentUpdateViewState {
 
     public withRoom(value: IRoom): IncidentUpdateViewState {
         this.room = value;
+        return this;
+    }
+
+    public withUser(value: IUser): IncidentUpdateViewState {
+        this.user = value;
         return this;
     }
 
@@ -100,27 +106,28 @@ export class IncidentUpdateView {
                     }),
                 ]
             })
-            .addDividerBlock()
+            .addDividerBlock();
 
-        
-        this.state.servicesSelected.forEach((id) => {
-            const serviceName = this.state.services.find((service) => service.id == id).name;
-            block
-                .addSectionBlock({
-                    text: block.newPlainTextObject(`Inform the ${serviceName} status`)
-                })
-                .addActionsBlock({
-                    blockId: `vinup_services_${id}_status_static`,
-                    elements: [
-                        block.newStaticSelectElement({
-                            placeholder: block.newPlainTextObject(`Select the status`),
-                            actionId: `vinup_services_${id}_status_static_select`,
-                            options: this.state.servicesStatuses.map((item) => 
-                                <IOptionObject> { text: block.newPlainTextObject(item.value), value: item.id })
-                        })
-                    ]
-                })
-        })
+        if (this.state.servicesSelected) {
+            this.state.servicesSelected.forEach((id) => {
+                const serviceName = this.state.services.find((service) => service.id == id).name;
+                block
+                    .addSectionBlock({
+                        text: block.newPlainTextObject(`Inform the ${serviceName} status`)
+                    })
+                    .addActionsBlock({
+                        blockId: `vinup_services_${id}_status_static`,
+                        elements: [
+                            block.newStaticSelectElement({
+                                placeholder: block.newPlainTextObject(`Select the status`),
+                                actionId: `vinup_services_${id}_status_static_select`,
+                                options: this.state.servicesStatuses.map((item) => 
+                                    <IOptionObject> { text: block.newPlainTextObject(item.value), value: item.id })
+                            })
+                        ]
+                    })
+            });
+        }
         
         return {
             id: 'incident_update_view',
@@ -137,29 +144,30 @@ export class IncidentUpdateView {
         }
     }
 
-    public setState(incidentStatuses: EnumCollection<string>[],
+    public setInitialState(incidentID: number,
+        incidentStatuses: EnumCollection<string>[],
         services: Service[],
-        servicesSelected: any[],
         servicesStatuses: EnumCollection<string>[],
-        room?: IRoom,
-        incidentID?: number): void {
-        if (room && incidentID) {
-            this.state = IncidentUpdateViewState.create()
-                .withRoom(room)
-                .withIncidentId(incidentID)
-                .withIncidentStatuses(incidentStatuses)
-                .withServices(services)
-                .withServicesSelected(servicesSelected)
-                .withServicesStatuses(servicesStatuses);
-        } else {
-            this.state = IncidentUpdateViewState.create()
-                .withRoom(this.state.room)
-                .withIncidentId(this.state.incidentID)
-                .withIncidentStatuses(incidentStatuses)
-                .withServices(services)
-                .withServicesSelected(servicesSelected)
-                .withServicesStatuses(servicesStatuses);    
-        }
+        room: IRoom,
+        user: IUser): void {
+        this.state = IncidentUpdateViewState.create()
+            .withIncidentId(incidentID)
+            .withIncidentStatuses(incidentStatuses)
+            .withRoom(room)
+            .withUser(user)
+            .withServices(services)
+            .withServicesStatuses(servicesStatuses);
+    }
+
+    public setState(servicesSelected: any[]) {
+        this.state = IncidentUpdateViewState.create()
+            .withIncidentId(this.state.incidentID)
+            .withIncidentStatuses(this.state.incidentStatuses)
+            .withRoom(this.state.room)
+            .withUser(this.state.user)
+            .withServices(this.state.services)
+            .withServicesStatuses(this.state.servicesStatuses)
+            .withServicesSelected(servicesSelected);
     }
 
     public onDismiss() : void {}
@@ -178,11 +186,12 @@ export class IncidentUpdateView {
         try {
             const incident = await this.service.createUpdate(this.state.incidentID, update, read, http);
         
-            const messageText = `We have an update for the incident *${incident.id}*:
+            const messageText = `We have an update for the incident *${incident.id}*: ${incident.status.toLocaleUpperCase()}
         
-                - *Time*: ${new Date(incident.time).toUTCString()}
-                - *Description*: ${incident.title} 
-                - *Status: ${incident.status.toLocaleUpperCase()}*
+                *Created at*: ${new Date(incident.time).toUTCString()}
+                *Created by*: @${this.state.user.username}
+                *Updated at*: ${new Date(update.time).toUTCString()}
+                *Description*: ${incident.title}
 
                 _*${update.message}*_
                 *Services affected**: 
@@ -190,7 +199,7 @@ export class IncidentUpdateView {
             `
             const message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
-                .setSender(await UserUtility.getRocketCatUser(read))
+                .setSender(await read.getUserReader().getByUsername('rocket.cat'))
                 .setUsernameAlias('Houston Control')
                 .setText(messageText)
     

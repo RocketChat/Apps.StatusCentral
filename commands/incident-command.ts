@@ -1,23 +1,22 @@
-import { SettingsEnum } from '../models/enum/settings-enum';
-import { HoustonControl } from '../houston-control';
-
 import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
-import { IncidentService } from '../service/incident-service';
-import { ServiceService } from '../service/service-service';
+import { HoustonControl } from '../houston-control';
 import { IncidentStatusEnum } from '../models/enum/incident-status-enum';
 import { ServiceStatusEnum } from '../models/enum/service-status-enum';
+import { SettingsEnum } from '../models/enum/settings-enum';
+import { IncidentService } from '../service/incident-service';
+import { ServiceService } from '../service/service-service';
 
 export class IncidentCommand implements ISlashCommand {
-    private app: HoustonControl;
-    private incidentService: IncidentService;
-    private serviceService: ServiceService;
-
     public command = 'incident';
     public i18nParamsExample = 'Incident_Command_Params_Example';
     public i18nDescription = 'Incident_Command_Description';
     public permission = 'view-logs';
     public providesPreview = false;
+
+    private app: HoustonControl;
+    private incidentService: IncidentService;
+    private serviceService: ServiceService;
 
     constructor(app: HoustonControl, incidentService: IncidentService, serviceService: ServiceService) {
         this.app = app;
@@ -39,8 +38,7 @@ export class IncidentCommand implements ISlashCommand {
             return await this.haveThemInviteRocketCatUser(context, modify);
         }
 
-        console.log(context.getArguments().length)
-        this.app.getLogger().log(context.getArguments().length)
+        this.app.getLogger().log(context.getArguments().length);
 
         switch (context.getArguments().length) {
             case 0:
@@ -77,10 +75,18 @@ export class IncidentCommand implements ISlashCommand {
                         const incidentStatuses = IncidentStatusEnum.getCollection();
                         const services = await this.serviceService.get(read, http);
                         const servicesStatuses = ServiceStatusEnum.getCollection();
-    
-                        this.app.getIncidentCreateView().setState(incidentStatuses, services, [], servicesStatuses, context.getRoom());
+                        const room = context.getRoom();
+                        const roomUsers = await read.getRoomReader().getMembers(context.getRoom().id);
+                        const user = context.getSender();
+
+                        this.app.getIncidentCreateView().setInitialState(incidentStatuses,
+                            services,
+                            servicesStatuses,
+                            room,
+                            roomUsers,
+                            user);
                         const view = await this.app.getIncidentCreateView().renderAsync(modify);
-                        return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());    
+                        return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());
                     } catch (err) {
                         this.app.getLogger().log(`An error occured during the incident creation request. Error: ${err}`);
                         message = message.setText('An error occured during the incident creation request. Please, try again later');
@@ -121,21 +127,25 @@ export class IncidentCommand implements ISlashCommand {
                 if (triggerId) {
                     const incidentID = context.getArguments()[1].toLowerCase();
                     try {
-                        const incident = await this.incidentService.get(incidentID, read, http);
-                        console.log(incident);
+                        await this.incidentService.get(incidentID, read, http);
                     } catch (err) {
                         this.app.getLogger().log(`An error occured during search for incident with id ${incidentID}. Error: ${err}`);
                         message = message.setText('Please inform a valid incident');
-                        break;                        
+                        break;
                     }
-                    try {                        
+                    try {
                         const incidentStatuses = IncidentStatusEnum.getCollection();
                         const services = await this.serviceService.get(read, http);
                         const servicesStatuses = ServiceStatusEnum.getCollection();
-    
-                        this.app.getIncidentUpdateView().setState(incidentStatuses, services, [], servicesStatuses, context.getRoom(), Number(incidentID));
+
+                        this.app.getIncidentUpdateView().setInitialState(Number(incidentID),
+                            incidentStatuses,
+                            services,
+                            servicesStatuses,
+                            context.getRoom(),
+                            context.getSender());
                         const view = await this.app.getIncidentUpdateView().renderAsync(modify);
-                        return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());    
+                        return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());
                     } catch (err) {
                         this.app.getLogger().log(`An error occured during the incident update request. Error: ${err}`);
                         message = message.setText('An error occured during the incident update request. Please, try again later');
@@ -151,11 +161,10 @@ export class IncidentCommand implements ISlashCommand {
                     const incidentID = context.getArguments()[1].toLowerCase();
                     try {
                         const incident = await this.incidentService.get(incidentID, read, http);
-                        console.log(incident);
-                        try {                        
-                            this.app.getIncidentCloseView().setState(incident, context.getRoom());
+                        try {
+                            this.app.getIncidentCloseView().setInitialState(incident, context.getRoom(), context.getSender());
                             const view = await this.app.getIncidentCloseView().renderAsync(modify);
-                            return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());    
+                            return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());
                         } catch (err) {
                             this.app.getLogger().log(`An error occured during the incident close request. Error: ${err}`);
                             message = message.setText('An error occured during the incident close request. Please, try again later');
@@ -164,9 +173,8 @@ export class IncidentCommand implements ISlashCommand {
                     } catch (err) {
                         this.app.getLogger().log(`An error occured during search for incident with id ${incidentID}. Error: ${err}`);
                         message = message.setText('Please inform a valid incident');
-                        break;                        
+                        break;
                     }
-
                 } else {
                     break;
                 }

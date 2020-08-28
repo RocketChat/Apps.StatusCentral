@@ -3,14 +3,17 @@ import { IOptionObject } from '@rocket.chat/apps-engine/definition/uikit/blocks'
 import { IUIKitModalViewParam } from '@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder';
 import { IncidentService } from '../../service/incident-service';
 import { Incident } from '../../models/incident';
-import { UserUtility } from '../../utils/users';
 import { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
 import { EnumCollection } from '../../models/enum/enum-collection';
 import { ServiceStatusEnum } from '../../models/enum/service-status-enum';
 import { Service } from '../../models/service';
+import { IUser } from '@rocket.chat/apps-engine/definition/users';
 
 class IncidentCreateViewState {
     public room: IRoom;
+    public roomUsers: IUser[];
+    public roomUsersSelected: any[];
+    public user: IUser;
     public incidentStatuses: EnumCollection<string>[];
     public services: any[];
     public servicesSelected: any[];
@@ -22,6 +25,21 @@ class IncidentCreateViewState {
 
     public withRoom(value: IRoom): IncidentCreateViewState {
         this.room = value;
+        return this;
+    }
+
+    public withRoomUsers(value: IUser[]): IncidentCreateViewState {
+        this.roomUsers = value;
+        return this;
+    }
+
+    public withRoomUsersSelected(value: any[]): IncidentCreateViewState {
+        this.roomUsersSelected = value;
+        return this;
+    }
+
+    public withUser(value: IUser): IncidentCreateViewState {
+        this.user = value;
         return this;
     }
 
@@ -80,6 +98,22 @@ export class IncidentCreateView {
             })
             .addDividerBlock()
             .addSectionBlock({
+                text: block.newPlainTextObject('Inform the users that may support you with the resolution')
+            })
+            .addActionsBlock({
+                blockId: 'vinc_users_multi',
+                elements: [
+                    block.newMultiStaticElement({
+                        placeholder: block.newPlainTextObject('Select the users'),
+                        actionId: 'vinc_users_multi_select',
+                        options: this.state.roomUsers.map((user) => 
+                            <IOptionObject> { text: block.newPlainTextObject(user.name), value: user.username }),
+                        initialValue: this.state.roomUsersSelected,
+                    }),
+                ]
+            })
+            .addDividerBlock()
+            .addSectionBlock({
                 text: block.newPlainTextObject('Inform the affected services')
             })
             .addActionsBlock({
@@ -96,25 +130,26 @@ export class IncidentCreateView {
             })
             .addDividerBlock()
 
-        
-        this.state.servicesSelected.forEach((id) => {
-            const serviceName = this.state.services.find((item) => item.id == id).name;
-            block
-                .addSectionBlock({
-                    text: block.newPlainTextObject(`Inform the ${serviceName} status`)
-                })
-                .addActionsBlock({
-                    blockId: `vinc_services_${id}_status_static`,
-                    elements: [
-                        block.newStaticSelectElement({
-                            placeholder: block.newPlainTextObject(`Select the status`),
-                            actionId: `vinc_services_${id}_status_static_select`,
-                            options: this.state.serviceStatuses.map((item) => 
-                                <IOptionObject> { text: block.newPlainTextObject(item.value), value: item.id })
-                        })
-                    ]
-                })
-        })
+        if (this.state.servicesSelected) {
+            this.state.servicesSelected.forEach((id) => {
+                const serviceName = this.state.services.find((item) => item.id == id).name;
+                block
+                    .addSectionBlock({
+                        text: block.newPlainTextObject(`Inform the ${serviceName} status`)
+                    })
+                    .addActionsBlock({
+                        blockId: `vinc_services_${id}_status_static`,
+                        elements: [
+                            block.newStaticSelectElement({
+                                placeholder: block.newPlainTextObject(`Select the status`),
+                                actionId: `vinc_services_${id}_status_static_select`,
+                                options: this.state.serviceStatuses.map((item) => 
+                                    <IOptionObject> { text: block.newPlainTextObject(item.value), value: item.id })
+                            })
+                        ]
+                    })
+            })
+        }
         
         return {
             id: 'incident_create_view',
@@ -131,25 +166,43 @@ export class IncidentCreateView {
         }
     }
 
-    public setState(incidentStatuses: EnumCollection<string>[], 
+    public setInitialState(incidentStatuses: EnumCollection<string>[], 
         services: Service[], 
-        servicesSelected: any[], 
         serviceStatuses: EnumCollection<string>[],
-        room?: IRoom): void {
-        if (room) {
-            this.state = IncidentCreateViewState.create()
-                .withRoom(room)
-                .withIncidentStatuses(incidentStatuses)
-                .withServices(services)
-                .withServicesSelected(servicesSelected)
-                .withServiceStatuses(serviceStatuses);
-        } else {
+        room: IRoom,
+        roomUsers: IUser[],
+        user: IUser): void {
+        this.state = IncidentCreateViewState.create()
+            .withRoom(room)
+            .withRoomUsers(roomUsers)
+            .withUser(user)
+            .withIncidentStatuses(incidentStatuses)
+            .withServices(services)
+            .withServiceStatuses(serviceStatuses);
+    }
+
+    public setState(servicesSelected?: any[], roomUsersSelected?: any[]): void {
+        if (servicesSelected) {
             this.state = IncidentCreateViewState.create()
                 .withRoom(this.state.room)
-                .withIncidentStatuses(incidentStatuses)
-                .withServices(services)
+                .withRoomUsers(this.state.roomUsers)
+                .withRoomUsersSelected(this.state.roomUsersSelected)
+                .withUser(this.state.user)
+                .withIncidentStatuses(this.state.incidentStatuses)
+                .withServices(this.state.services)
                 .withServicesSelected(servicesSelected)
-                .withServiceStatuses(serviceStatuses);
+                .withServiceStatuses(this.state.serviceStatuses);
+        } 
+        if (roomUsersSelected) {
+            this.state = IncidentCreateViewState.create()
+                .withRoom(this.state.room)
+                .withRoomUsers(this.state.roomUsers)
+                .withRoomUsersSelected(roomUsersSelected)
+                .withUser(this.state.user)
+                .withIncidentStatuses(this.state.incidentStatuses)
+                .withServices(this.state.services)
+                .withServicesSelected(this.state.servicesSelected)
+                .withServiceStatuses(this.state.serviceStatuses);
         }
     }
 
@@ -168,19 +221,23 @@ export class IncidentCreateView {
         try {
             incident = await this.service.create(incident, read, http);
         
-            const messageText = `We have a new incident *(${incident.id})*: *${incident.status.toLocaleUpperCase()}*
-    
-                _*${incident.title}*_
+            const messageText = `We have a new incident with ID *${incident.id}*: *${incident.status.toLocaleUpperCase()}*
+            
+                *Created at*: ${new Date(incident.time).toUTCString()}
+                *Created by*: @${this.state.user.username}
+                *Support requested from*: ${this.state.roomUsersSelected.map(user => `@${user}`).join(', ')}
+                *Description*: _*${incident.title}*_
                 *Services affected**: 
                 ${incident.services.map(service => `- *${service.name}*: _${service.status}_ \n`)}
             `
             const message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
-                .setSender(await UserUtility.getRocketCatUser(read))
+                .setSender(await read.getUserReader().getByUsername('rocket.cat'))
                 .setUsernameAlias('Houston Control')
-                .setText(messageText)
-    
+                .setGroupable(false)
+                .setText(messageText);
             await modify.getCreator().finish(message);
+
             return incident;
         } catch (err) {
             let alert = modify.getCreator().startMessage()

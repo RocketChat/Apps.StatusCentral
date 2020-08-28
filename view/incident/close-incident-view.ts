@@ -3,13 +3,14 @@ import { ILogger, IModify, IRead, IHttp } from "@rocket.chat/apps-engine/definit
 import { IncidentService } from "../../service/incident-service";
 import { IRoom } from "@rocket.chat/apps-engine/definition/rooms";
 import { IUIKitModalViewParam } from "@rocket.chat/apps-engine/definition/uikit/UIKitInteractionResponder";
-import { UserUtility } from "../../utils/users";
 import { IncidentUpdate } from "../../models/incident-update";
 import { IncidentStatusEnum } from "../../models/enum/incident-status-enum";
+import { IUser } from "@rocket.chat/apps-engine/definition/users";
 
 class IncidentCloseViewState {
     public incident: Incident;
     public room: IRoom;
+    public user: IUser;
 
     public static create(): IncidentCloseViewState {
         return new IncidentCloseViewState();
@@ -22,6 +23,11 @@ class IncidentCloseViewState {
 
     public withRoom(value: IRoom): IncidentCloseViewState {
         this.room = value;
+        return this;
+    }
+
+    public withUser(value: IUser): IncidentCloseViewState {
+        this.user = value;
         return this;
     }
 }
@@ -90,16 +96,11 @@ export class IncidentCloseView {
         }
     }
 
-    public setState(incident: Incident, room?: IRoom) {
-        if (room) {
-            this.state = IncidentCloseViewState.create()
-                .withIncident(incident)
-                .withRoom(room);
-        } else {
-            this.state = IncidentCloseViewState.create()
-                .withIncident(incident)
-                .withRoom(this.state.room);
-        }
+    public setInitialState(incident: Incident, room: IRoom, user: IUser) {
+        this.state = IncidentCloseViewState.create()
+            .withIncident(incident)
+            .withRoom(room)
+            .withUser(user);
     }
 
     public onDismiss() : void {}
@@ -114,13 +115,13 @@ export class IncidentCloseView {
         try {
             const incident = await this.service.createUpdate(this.state.incident.id, update, read, http);
         
-            const messageText = `The incident *${this.state.incident.id}* was solved 🚀
+            const messageText = `The incident *${this.state.incident.id}* was resolved 🚀
     
                 *Created at*: ${new Date(this.state.incident.time).toUTCString()}
                 *Solved at*: ${new Date().toUTCString()}
-                *Description*: ${this.state.incident.title} 
-                *Status*: _${this.state.incident.status}_
-                *Services**: ${this.state.incident.services.map(service => `_${service.name}_`).join(', ')}
+                *Solved by*: @${this.state.user.username}
+                *Description*: ${this.state.incident.title}
+                *Services**: ${this.state.incident.services.map(service => `*${service.name}*`).join(', ')}
                 *Summary*: ${data['vinc_summary_input']['vinc_summary_input_value']}
                 *Impact*: ${data['vinc_impact_input']['vinc_impact_input_value']}
                 *Causes*: ${data['vinc_causes_input']['vinc_causes_input_value']}
@@ -131,7 +132,7 @@ export class IncidentCloseView {
             `
             const message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
-                .setSender(await UserUtility.getRocketCatUser(read))
+                .setSender(await read.getUserReader().getByUsername('rocket.cat'))
                 .setUsernameAlias('Houston Control')
                 .setText(messageText);
             await modify.getCreator().finish(message);
