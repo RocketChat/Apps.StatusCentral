@@ -186,7 +186,7 @@ export class IncidentUpdateView {
         try {
             const incident = await this.service.createUpdate(this.state.incidentID, update, read, http);
         
-            const messageText = `We have an update for the incident *${incident.id}*: ${incident.status.toLocaleUpperCase()}
+            const messageText = `We have an update for the incident *${incident.id}*: *${incident.status.toLocaleUpperCase()}*
         
                 *Created at*: ${new Date(incident.time).toUTCString()}
                 *Created by*: @${this.state.user.username}
@@ -210,7 +210,7 @@ export class IncidentUpdateView {
                 .setRoom(this.state.room)
                 .setUsernameAlias('Houston Control')
                 .setGroupable(false)
-                .setText('An error occured during the incident update in statuscentral. Please, try again later');
+                .setText('An error occured during the incident update. Please, try again later');
             await modify.getNotifier().notifyRoom(this.state.room, alert.getMessage());
             throw err;
         }

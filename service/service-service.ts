@@ -11,7 +11,7 @@ export class ServiceService {
 
     public async get(read: IRead, http: IHttp): Promise<Array<Service>> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
-        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
+        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SSL);
 
         const result = await http.get(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/services`);
         if (!result) {

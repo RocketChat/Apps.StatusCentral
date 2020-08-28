@@ -4,9 +4,9 @@
     "requiredApiVersion": "^1.4.1",
     "iconFile": "icon.png",
     "author": {
-        "name": "Bradley Hilton",
+        "name": "Gustavo Dala Vechia",
         "homepage": "https://rocket.chat",
-        "support": "https://github.com/RocketChat/statuscentral/issues"
+        "support": "https://github.com/RocketChat/status-page-app"
     },
     "name": "Houston Control",
     "nameSlug": "houston-control",

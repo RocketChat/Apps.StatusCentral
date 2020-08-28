@@ -10,7 +10,7 @@ export class ConfigService {
 
     public async get(read: IRead, http: IHttp): Promise<boolean> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
-        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
+        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SSL);
 
         this.logger.log(url);
         this.logger.log(ssl);

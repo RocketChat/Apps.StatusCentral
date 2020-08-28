@@ -83,7 +83,7 @@ export class IncidentCloseView {
             })
         return {
             id: 'incident_close_view',
-            title: block.newPlainTextObject('Close the incident'),
+            title: block.newPlainTextObject(`Close the incident ${this.state.incident.id}`),
             submit: block.newButtonElement({
                 actionId: "vinc_close",
                 text: block.newPlainTextObject('Close'),
@@ -118,8 +118,8 @@ export class IncidentCloseView {
             const messageText = `The incident *${this.state.incident.id}* was resolved 🚀
     
                 *Created at*: ${new Date(this.state.incident.time).toUTCString()}
-                *Solved at*: ${new Date().toUTCString()}
-                *Solved by*: @${this.state.user.username}
+                *Closed at*: ${new Date().toUTCString()}
+                *Closed by*: @${this.state.user.username}
                 *Description*: ${this.state.incident.title}
                 *Services**: ${this.state.incident.services.map(service => `*${service.name}*`).join(', ')}
                 *Summary*: ${data['vinc_summary_input']['vinc_summary_input_value']}
@@ -143,7 +143,7 @@ export class IncidentCloseView {
                 .setRoom(this.state.room)
                 .setUsernameAlias('Houston Control')
                 .setGroupable(false)
-                .setText('An error occured during the incident update in statuscentral. Please, try again later');
+                .setText('An error occured during the incident update. Please, try again later');
             await modify.getNotifier().notifyRoom(this.state.room, alert.getMessage());
             throw err;
         }

@@ -12,7 +12,7 @@ export class IncidentService {
 
     public async create(incident: Partial<Incident>, read: IRead, http: IHttp): Promise<Incident> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
-        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
+        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SSL);
 
         const options: IHttpRequest = { data: incident };
         const result = await http.post(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/incidents`, options);
@@ -33,12 +33,12 @@ export class IncidentService {
 
     public async createUpdate(id: number, incidentUpdate: Partial<IncidentUpdate>, read: IRead, http: IHttp): Promise<Incident> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
-        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
+        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SSL);
 
         const options: IHttpRequest = { data: incidentUpdate };
         const result = await http.post(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/incidents/${ id }/updates`, options);
         if (!result) {
-            throw new Error(`Failure to create the incident update in status central. Check if the service is available.`);
+            throw new Error(`Failure to create the incident update in statuscentral. Check if the service is available.`);
         }
 
         if (result.statusCode !== HttpStatusCode.CREATED) {
@@ -50,7 +50,7 @@ export class IncidentService {
 
     public async get(id: string, read: IRead, http: IHttp): Promise<Incident> {
         const url = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL);
-        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SLL);
+        const ssl = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.SERVER_URL_USE_SSL);
 
         const result = await http.get(`${ ssl ? 'https' : 'http' }://${ url }/api/v1/incidents/${ id }`);
         if (!result) {
@@ -58,7 +58,7 @@ export class IncidentService {
         }
 
         if (result.statusCode !== HttpStatusCode.OK) {
-            throw new Error(`Failure to get the incident: ${ result.data.message } (status: ${ result.statusCode })`);
+            throw new Error(`Failure to retrieve the incident: ${ result.data.message } (status: ${ result.statusCode })`);
         }
 
         return result.data as Incident;

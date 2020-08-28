@@ -79,7 +79,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
                         success: true,
                     };
                 } catch (err) {
-                    this.getLogger().log(`An error occured during the incident creation. Error: ${err}`)
+                    this.getLogger().log(`An error occured during the incident creation. ${err}`)
                     return context.getInteractionResponder().viewErrorResponse({
                         viewId: data.view.id,
                         errors: {
@@ -95,7 +95,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
                         success: true,
                     };
                 } catch (err) {
-                    this.getLogger().log(`An error occured during the incident update. Error: ${err}`)
+                    this.getLogger().log(`An error occured during the incident update. ${err}`)
                     return context.getInteractionResponder().viewErrorResponse({
                         viewId: data.view.id,
                         errors: {
@@ -111,11 +111,11 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
                         success: true,
                     };
                 } catch (err) {
-                    this.getLogger().log(`An error occured during the incident closing. Error: ${err}`)
+                    this.getLogger().log(`An error occured during the incident update. ${err}`)
                     return context.getInteractionResponder().viewErrorResponse({
                         viewId: data.view.id,
                         errors: {
-                            vinup_message_input_value: 'An error occured during the incident closing. Please try again.'
+                            vinc_summary_input_value: 'An error occured during the incident update. Please try again.'
                         }
                     });
                 }
@@ -175,7 +175,7 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
         });
 
         await configurationExtend.settings.provideSetting({
-            id: SettingsEnum.SERVER_URL_USE_SLL,
+            id: SettingsEnum.SERVER_URL_USE_SSL,
             type: SettingType.BOOLEAN,
             required: true,
             public: false,

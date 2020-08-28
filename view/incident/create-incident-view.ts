@@ -244,7 +244,7 @@ export class IncidentCreateView {
                 .setRoom(this.state.room)
                 .setUsernameAlias('Houston Control')
                 .setGroupable(false)
-                .setText('An error occured during the incident creation in statuscentral. Please, try again later');
+                .setText('An error occured during the incident creation. Please, try again later');
             await modify.getNotifier().notifyRoom(this.state.room, alert.getMessage());
             throw err;
         }
