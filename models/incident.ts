@@ -1,4 +1,5 @@
 import { IncidentStatusEnum } from './enum/incident-status-enum';
+import { IncidentMaintenance } from './incident-maintenance';
 import { IncidentUpdate } from './incident-update';
 import { Service } from './service';
 
@@ -14,6 +15,7 @@ export class Incident {
     public services: Array<Partial<Service>>;
     public updates: Array<Partial<IncidentUpdate>>;
     public updatedAt: Date;
+    public maintenance: IncidentMaintenance;
 
     public withId(value: number): Incident {
         this.id = value;
@@ -47,6 +49,11 @@ export class Incident {
 
     public withUpdatedAt(value: Date): Incident {
         this.updatedAt = value;
+        return this;
+    }
+
+    public withMaintenance(value: IncidentMaintenance): Incident {
+        this.maintenance = value;
         return this;
     }
 }

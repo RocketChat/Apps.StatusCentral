@@ -1,7 +1,7 @@
 import { EnumCollection } from "./enum-collection";
 
 export enum ServiceStatusEnum {
-    Operational = 'Operational',
+    Nominal = 'Nominal',
     Degraded = 'Degraded',
     PartialOutage = 'Partial-outage',
     Outage = 'Outage',

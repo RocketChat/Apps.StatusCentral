@@ -1,11 +1,12 @@
 import { IHttp, IModify, IPersistence, IRead } from '@rocket.chat/apps-engine/definition/accessors';
+import { IRoom } from '@rocket.chat/apps-engine/definition/rooms';
 import { ISlashCommand, SlashCommandContext } from '@rocket.chat/apps-engine/definition/slashcommands';
-import { HoustonControl } from '../houston-control';
 import { IncidentStatusEnum } from '../models/enum/incident-status-enum';
 import { ServiceStatusEnum } from '../models/enum/service-status-enum';
 import { SettingsEnum } from '../models/enum/settings-enum';
 import { IncidentService } from '../service/incident-service';
 import { ServiceService } from '../service/service-service';
+import { Sitcom } from '../sitcom';
 
 export class IncidentCommand implements ISlashCommand {
     public command = 'incident';
@@ -14,11 +15,11 @@ export class IncidentCommand implements ISlashCommand {
     public permission = 'view-logs';
     public providesPreview = false;
 
-    private app: HoustonControl;
+    private app: Sitcom;
     private incidentService: IncidentService;
     private serviceService: ServiceService;
 
-    constructor(app: HoustonControl, incidentService: IncidentService, serviceService: ServiceService) {
+    constructor(app: Sitcom, incidentService: IncidentService, serviceService: ServiceService) {
         this.app = app;
         this.incidentService = incidentService;
         this.serviceService = serviceService;
@@ -27,8 +28,15 @@ export class IncidentCommand implements ISlashCommand {
     public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
         const expectedRoomId = await read.getEnvironmentReader().getSettings().getValueById(SettingsEnum.ROOM_ID);
 
-        if (expectedRoomId !== context.getRoom().id) {
-            return await this.handleIncorrectRoom(context, modify);
+        if (context.getRoom().parentRoom) {
+            const parentRoom = <IRoom> context.getRoom().parentRoom;
+            if (expectedRoomId !== context.getRoom().id && expectedRoomId !== parentRoom.id) {
+                return await this.handleIncorrectRoom(context, modify);
+            }
+        } else {
+            if (expectedRoomId !== context.getRoom().id) {
+                return await this.handleIncorrectRoom(context, modify);
+            }
         }
 
         const members = await read.getRoomReader().getMembers(expectedRoomId);
@@ -128,29 +136,33 @@ export class IncidentCommand implements ISlashCommand {
                 if (triggerId) {
                     const incidentID = context.getArguments()[1].toLowerCase();
                     try {
-                        await this.incidentService.get(incidentID, read, http);
+                        const incident = await this.incidentService.get(incidentID, read, http);
+                        try {
+                            const incidentStatuses = IncidentStatusEnum.getCollection();
+                            const services = await this.serviceService.get(read, http);
+                            const servicesStatuses = ServiceStatusEnum.getCollection();
+                            this.app.getIncidentUpdateView().setInitialState(this.app.getName(),
+                                incident,
+                                incidentStatuses,
+                                services,
+                                servicesStatuses,
+                                context.getRoom(),
+                                context.getSender());
+                            const servicesSelected: Array<number> = [];
+                            services.forEach((service, index) =>
+                                incident.services.filter((item) => item.name === service.name).length > 0 ? servicesSelected.push(index + 1) : 0);
+                            this.app.getIncidentUpdateView().setState(servicesSelected);
+
+                            const view = await this.app.getIncidentUpdateView().renderAsync(modify);
+                            return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());
+                        } catch (err) {
+                            this.app.getLogger().log(`An error occured during the incident update request. Error: ${err}`);
+                            message = message.setText('An error occured during the incident update request. Please, try again later');
+                            break;
+                        }
                     } catch (err) {
                         this.app.getLogger().log(`An error occured during search for incident with id ${incidentID}. Error: ${err}`);
                         message = message.setText('Please inform a valid incident');
-                        break;
-                    }
-                    try {
-                        const incidentStatuses = IncidentStatusEnum.getCollection();
-                        const services = await this.serviceService.get(read, http);
-                        const servicesStatuses = ServiceStatusEnum.getCollection();
-
-                        this.app.getIncidentUpdateView().setInitialState(this.app.getName(),
-                            Number(incidentID),
-                            incidentStatuses,
-                            services,
-                            servicesStatuses,
-                            context.getRoom(),
-                            context.getSender());
-                        const view = await this.app.getIncidentUpdateView().renderAsync(modify);
-                        return await modify.getUiController().openModalView(view, { triggerId }, context.getSender());
-                    } catch (err) {
-                        this.app.getLogger().log(`An error occured during the incident update request. Error: ${err}`);
-                        message = message.setText('An error occured during the incident update request. Please, try again later');
                         break;
                     }
                 } else {
@@ -197,18 +209,18 @@ export class IncidentCommand implements ISlashCommand {
 
     private async handleIncorrectRoom(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator()
-                .startMessage().setRoom(context.getRoom())
-                .setUsernameAlias(this.app.getName()).setGroupable(false)
-                .setText(`Unexpected room. The room you're in (\`${ context.getRoom().id }\`) is not the expected room.`);
+            .startMessage().setRoom(context.getRoom())
+            .setUsernameAlias(this.app.getName()).setGroupable(false)
+            .setText(`Unexpected room. The room you're in (\`${ context.getRoom().id }\`) is not the expected room.`);
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
     }
 
     private async haveThemInviteRocketCatUser(context: SlashCommandContext, modify: IModify): Promise<void> {
         const msg = modify.getCreator()
-                .startMessage().setRoom(context.getRoom())
-                .setUsernameAlias(this.app.getName()).setGroupable(false)
-                .setText(`Please invite the @rocket.cat user. (\`/invite @rocket.cat\`)`);
+            .startMessage().setRoom(context.getRoom())
+            .setUsernameAlias(this.app.getName()).setGroupable(false)
+            .setText(`Please invite the @rocket.cat user. (\`/invite @rocket.cat\`)`);
 
         await modify.getNotifier().notifyUser(context.getSender(), msg.getMessage());
     }

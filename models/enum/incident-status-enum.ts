@@ -2,6 +2,7 @@ import { EnumCollection } from "./enum-collection";
 
 export enum IncidentStatusEnum {
     Investigating = 'Investigating',
+    ScheduledMaintenance = 'Scheduled Maintenance',
     Identified = 'Identified',
     Update = 'Update',
     Monitoring = 'Monitoring',

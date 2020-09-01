@@ -8,12 +8,13 @@ import { IncidentUpdate } from "../../models/incident-update";
 import { ServiceStatusEnum } from "../../models/enum/service-status-enum";
 import { Service } from "../../models/service";
 import { IUser } from "@rocket.chat/apps-engine/definition/users";
+import { Incident } from "../../models/incident";
 
 class IncidentUpdateViewState {
     public appName: string;
     public room: IRoom;
     public user: IUser;
-    public incidentID: number;
+    public incident: Incident;
     public incidentStatuses: EnumCollection<string>[];
     public services: any[];
     public servicesSelected: any[];
@@ -38,8 +39,8 @@ class IncidentUpdateViewState {
         return this;
     }
 
-    public withIncidentId(value: number): IncidentUpdateViewState {
-        this.incidentID = value;
+    public withIncident(value: Incident): IncidentUpdateViewState {
+        this.incident = value;
         return this;
     }
 
@@ -137,7 +138,7 @@ export class IncidentUpdateView {
         
         return {
             id: 'incident_update_view',
-            title: block.newPlainTextObject(`Update the incident ${this.state.incidentID}`),
+            title: block.newPlainTextObject(`Update the incident ${this.state.incident.id}`),
             submit: block.newButtonElement({
                 actionId: "vinup_create",
                 text: block.newPlainTextObject('Create'),
@@ -151,7 +152,7 @@ export class IncidentUpdateView {
     }
 
     public setInitialState(appName: string,
-        incidentID: number,
+        incident: Incident,
         incidentStatuses: EnumCollection<string>[],
         services: Service[],
         servicesStatuses: EnumCollection<string>[],
@@ -159,7 +160,7 @@ export class IncidentUpdateView {
         user: IUser): void {
         this.state = IncidentUpdateViewState.create()
             .withAppName(appName)
-            .withIncidentId(incidentID)
+            .withIncident(incident)
             .withIncidentStatuses(incidentStatuses)
             .withRoom(room)
             .withUser(user)
@@ -170,7 +171,7 @@ export class IncidentUpdateView {
     public setState(servicesSelected: any[]) {
         this.state = IncidentUpdateViewState.create()
             .withAppName(this.state.appName)
-            .withIncidentId(this.state.incidentID)
+            .withIncident(this.state.incident)
             .withIncidentStatuses(this.state.incidentStatuses)
             .withRoom(this.state.room)
             .withUser(this.state.user)
@@ -183,7 +184,7 @@ export class IncidentUpdateView {
 
     public async onSubmitAsync(data: any, modify: IModify, read: IRead, http: IHttp) {
         let update = IncidentUpdate.create()
-            .withId(this.state.incidentID)
+            .withId(this.state.incident.id)
             .withTime(new Date())
             .withMessage(data['vinup_message_input']['vinup_message_input_value'])
             .withStatus(data['vinup_status_static']['vinup_status_static_select'])
@@ -193,12 +194,12 @@ export class IncidentUpdateView {
                 return service;
             }));
         try {
-            const incident = await this.service.createUpdate(this.state.incidentID, update, read, http);
+            const incident = await this.service.createUpdate(this.state.incident.id, update, read, http);
         
             const messageText = `We have an update for the incident *${incident.id}*: *${incident.status.toLocaleUpperCase()}*
         
                 *Created at*: ${new Date(incident.time).toUTCString()}
-                *Created by*: @${this.state.user.username}
+                *Owner*: @${this.state.user.username}
                 *Updated at*: ${new Date(update.time).toUTCString()}
                 *Description*: ${incident.title}
 

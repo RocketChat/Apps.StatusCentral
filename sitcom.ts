@@ -26,7 +26,7 @@ import { IncidentService } from './service/incident-service';
 import { ServiceService } from './service/service-service';
 import { ConfigService } from './service/config-service';
 
-export class HoustonControl extends App implements IUIKitInteractionHandler {
+export class Sitcom extends App implements IUIKitInteractionHandler {
     private configService: ConfigService;
     private incidentService: IncidentService;
     private servicesService: ServiceService;
@@ -131,20 +131,27 @@ export class HoustonControl extends App implements IUIKitInteractionHandler {
     public async executeBlockActionHandler(context: UIKitBlockInteractionContext, read: IRead, http: IHttp, persistence: IPersistence, modify: IModify) {
         const data = context.getInteractionData();
         switch (data.actionId) {
+            case 'vinc_status_static_select': {
+                if (data.value) {
+                    const incidentStatusSelected = <any> data.value;
+                    this.incidentCreateView.setState(incidentStatusSelected);
+                    return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentCreateView().renderAsync(modify));
+                }
+            }
             case 'vinc_services_multi_select': {
                 if (data.value) {
                     const servicesSelected = <any> data.value;
-                    this.incidentCreateView.setState(servicesSelected);
+                    this.incidentCreateView.setState(undefined, servicesSelected);
                     return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentCreateView().renderAsync(modify));
                 }
             }
             case 'vinc_users_multi_select': {
                 if (data.value) {
                     const roomUsersSelected = <any> data.value;
-                    this.incidentCreateView.setState(undefined, roomUsersSelected);
+                    this.incidentCreateView.setState(undefined, undefined, roomUsersSelected);
                     return context.getInteractionResponder().updateModalViewResponse(await this.getIncidentCreateView().renderAsync(modify));
                 }
-            }
+            }            
             case 'vinup_services_multi_select': {
                 if (data.value) {
                     const servicesSelected = <any> data.value;

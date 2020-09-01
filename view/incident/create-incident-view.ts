@@ -8,6 +8,8 @@ import { EnumCollection } from '../../models/enum/enum-collection';
 import { ServiceStatusEnum } from '../../models/enum/service-status-enum';
 import { Service } from '../../models/service';
 import { IUser } from '@rocket.chat/apps-engine/definition/users';
+import { IncidentStatusEnum } from '../../models/enum/incident-status-enum';
+import { IncidentMaintenance } from '../../models/incident-maintenance';
 
 class IncidentCreateViewState {
     public appName: string;
@@ -16,6 +18,7 @@ class IncidentCreateViewState {
     public roomUsersSelected: any[];
     public user: IUser;
     public incidentStatuses: EnumCollection<string>[];
+    public incidentStatusSelected: any;
     public services: any[];
     public servicesSelected: any[];
     public serviceStatuses: EnumCollection<string>[]
@@ -54,6 +57,11 @@ class IncidentCreateViewState {
         return this;
     }
 
+    public withIncidentStatusSelected(value: any): IncidentCreateViewState {
+        this.incidentStatusSelected = value;
+        return this;
+    }
+
     public withServices(value: Service[]): IncidentCreateViewState {
         this.services = value;
         return this;
@@ -81,7 +89,7 @@ export class IncidentCreateView {
     }
 
     public async renderAsync(modify: IModify): Promise<IUIKitModalViewParam>  {
-        const block = modify.getCreator().getBlockBuilder()
+        let block = modify.getCreator().getBlockBuilder()
         block
             .addInputBlock({
                 blockId: 'vinc_title_input',
@@ -98,10 +106,36 @@ export class IncidentCreateView {
                         placeholder: block.newPlainTextObject('Select the incident status'),
                         actionId: 'vinc_status_static_select',
                         options: this.state.incidentStatuses.map((status) => 
-                            <IOptionObject> { text: block.newPlainTextObject(status.value), value: status.id }),
+                            <IOptionObject> { text: block.newPlainTextObject(status.value), value: status.value }),
+                        initialValue: this.state.incidentStatusSelected
                     }),
                 ]
             })
+    
+        if (this.state.incidentStatusSelected) {
+            if (this.state.incidentStatusSelected == IncidentStatusEnum.ScheduledMaintenance) {
+                block
+                    .addDividerBlock()
+                    .addInputBlock({
+                        blockId: 'vinc_schedule_start_input',
+                        element: block.newPlainTextInputElement({
+                            initialValue: String(Math.round(new Date().getTime()/1000)), 
+                            actionId: 'vinc_schedule_start_input_value'
+                        }),
+                        label: block.newPlainTextObject('Inform the maintenance start time (Unix timestamp)')
+                    })
+                    .addInputBlock({
+                        blockId: 'vinc_schedule_end_input',
+                        element: block.newPlainTextInputElement({
+                            initialValue: String(Math.round(new Date().getTime()/1000)), 
+                            actionId: 'vinc_schedule_end_input_value'
+                        }),
+                        label: block.newPlainTextObject('Inform the maintenance predicted end time (Unix timestamp)')
+                    })
+            }
+        }
+
+        block
             .addDividerBlock()
             .addSectionBlock({
                 text: block.newPlainTextObject('Inform the users that may support you with the resolution')
@@ -136,25 +170,27 @@ export class IncidentCreateView {
             })
             .addDividerBlock()
 
-        if (this.state.servicesSelected) {
-            this.state.servicesSelected.forEach((id) => {
-                const serviceName = this.state.services.find((item) => item.id == id).name;
-                block
-                    .addSectionBlock({
-                        text: block.newPlainTextObject(`Inform the ${serviceName} status`)
-                    })
-                    .addActionsBlock({
-                        blockId: `vinc_services_${id}_status_static`,
-                        elements: [
-                            block.newStaticSelectElement({
-                                placeholder: block.newPlainTextObject(`Select the status`),
-                                actionId: `vinc_services_${id}_status_static_select`,
-                                options: this.state.serviceStatuses.map((item) => 
-                                    <IOptionObject> { text: block.newPlainTextObject(item.value), value: item.id })
-                            })
-                        ]
-                    })
-            })
+        if (this.state.servicesSelected && this.state.incidentStatusSelected) {
+            if (this.state.incidentStatusSelected != IncidentStatusEnum.ScheduledMaintenance) {
+                this.state.servicesSelected.forEach((id) => {
+                    const serviceName = this.state.services.find((item) => item.id == id).name;
+                    block
+                        .addSectionBlock({
+                            text: block.newPlainTextObject(`Inform the ${serviceName} status`)
+                        })
+                        .addActionsBlock({
+                            blockId: `vinc_services_${id}_status_static`,
+                            elements: [
+                                block.newStaticSelectElement({
+                                    placeholder: block.newPlainTextObject(`Select the status`),
+                                    actionId: `vinc_services_${id}_status_static_select`,
+                                    options: this.state.serviceStatuses.map((item) => 
+                                        <IOptionObject> { text: block.newPlainTextObject(item.value), value: item.id })
+                                })
+                            ]
+                        })
+                })
+            }
         }
         
         return {
@@ -189,7 +225,20 @@ export class IncidentCreateView {
             .withServiceStatuses(serviceStatuses);
     }
 
-    public setState(servicesSelected?: any[], roomUsersSelected?: any[]): void {
+    public setState(incidentStatusSelected?: any, servicesSelected?: any[], roomUsersSelected?: any[]): void {
+        if (incidentStatusSelected) {
+            this.state = IncidentCreateViewState.create()
+                .withAppName(this.state.appName)
+                .withRoom(this.state.room)
+                .withRoomUsers(this.state.roomUsers)
+                .withRoomUsersSelected(this.state.roomUsersSelected)
+                .withUser(this.state.user)
+                .withIncidentStatuses(this.state.incidentStatuses)
+                .withIncidentStatusSelected(incidentStatusSelected)
+                .withServices(this.state.services)
+                .withServicesSelected(this.state.servicesSelected)
+                .withServiceStatuses(this.state.serviceStatuses);
+        }
         if (servicesSelected) {
             this.state = IncidentCreateViewState.create()
                 .withAppName(this.state.appName)
@@ -198,6 +247,7 @@ export class IncidentCreateView {
                 .withRoomUsersSelected(this.state.roomUsersSelected)
                 .withUser(this.state.user)
                 .withIncidentStatuses(this.state.incidentStatuses)
+                .withIncidentStatusSelected(this.state.incidentStatusSelected)
                 .withServices(this.state.services)
                 .withServicesSelected(servicesSelected)
                 .withServiceStatuses(this.state.serviceStatuses);
@@ -210,10 +260,19 @@ export class IncidentCreateView {
                 .withRoomUsersSelected(roomUsersSelected)
                 .withUser(this.state.user)
                 .withIncidentStatuses(this.state.incidentStatuses)
+                .withIncidentStatusSelected(this.state.incidentStatusSelected)
                 .withServices(this.state.services)
                 .withServicesSelected(this.state.servicesSelected)
                 .withServiceStatuses(this.state.serviceStatuses);
         }
+    }
+
+    private generateDiscussionId(): string {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
     public onDismiss() : void {}
@@ -222,31 +281,47 @@ export class IncidentCreateView {
         let incident = Incident.create()
             .withTime(new Date())
             .withTitle(data['vinc_title_input']['vinc_title_input_value'])
-            .withStatus(data['vinc_status_static']['vinc_status_static_select'])
-            .withServices(data['vinc_services_multi']['vinc_services_multi_select'].map((index) => { 
+            .withStatus(data['vinc_status_static']['vinc_status_static_select']);
+
+        if (incident.status == IncidentStatusEnum.ScheduledMaintenance) {
+            incident = incident.withMaintenance(IncidentMaintenance.create()
+                .withStart(Number(data['vinc_schedule_start_input']['vinc_schedule_start_input_value']))
+                .withEnd(Number(data['vinc_schedule_end_input']['vinc_schedule_end_input_value'])))
+                .withServices(data['vinc_services_multi']['vinc_services_multi_select'].map((index) => this.state.services[index - 1]));
+        } else {
+            incident = incident.withServices(data['vinc_services_multi']['vinc_services_multi_select'].map((index) => { 
                 let service = this.state.services[index - 1];
                 service.status = ServiceStatusEnum[data[`vinc_services_${index}_status_static`][`vinc_services_${index}_status_static_select`]];
                 return service;
             }));
+        }
         try {
             incident = await this.service.create(incident, read, http);
         
             const messageText = `We have a new incident with ID *${incident.id}*: *${incident.status.toLocaleUpperCase()}*
             
                 *Created at*: ${new Date(incident.time).toUTCString()}
-                *Created by*: @${this.state.user.username}
+                *Owner*: @${this.state.user.username}
                 *Support requested from*: ${this.state.roomUsersSelected.map(user => `@${user}`).join(', ')}
                 *Description*: _*${incident.title}*_
                 *Services affected**: 
-                ${incident.services.map(service => `- *${service.name}*: _${service.status}_ \n`)}
+                ${incident.services.map(service => `- *${service.name}*: _${service.status}_ \n`).join(' ')}
             `
-            const message = modify.getCreator().startMessage()
+            let message = modify.getCreator().startMessage()
                 .setRoom(this.state.room)
                 .setSender(await read.getUserReader().getByUsername('rocket.cat'))
                 .setUsernameAlias(this.state.appName)
                 .setGroupable(false)
                 .setText(messageText);
             await modify.getCreator().finish(message);
+
+            const discussionId = this.generateDiscussionId();
+            const discussion = await modify.getCreator().startDiscussion()
+                .setParentRoom(this.state.room)
+                .setDisplayName(`Incident - ${incident.title}`)
+                .setSlugifiedName(discussionId)
+                .setCreator(this.state.user)
+            await modify.getCreator().finish(discussion);
 
             return incident;
         } catch (err) {
