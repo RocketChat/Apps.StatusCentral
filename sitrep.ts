@@ -26,7 +26,7 @@ import { IncidentService } from './service/incident-service';
 import { ServiceService } from './service/service-service';
 import { ConfigService } from './service/config-service';
 
-export class Sitcom extends App implements IUIKitInteractionHandler {
+export class Sitrep extends App implements IUIKitInteractionHandler {
     private configService: ConfigService;
     private incidentService: IncidentService;
     private servicesService: ServiceService;

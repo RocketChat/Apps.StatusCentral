@@ -8,8 +8,8 @@
         "homepage": "https://rocket.chat",
         "support": "https://github.com/RocketChat/status-page-app"
     },
-    "name": "Sitcom",
-    "nameSlug": "sitcom",
-    "classFile": "sitcom.ts",
+    "name": "Sitrep",
+    "nameSlug": "sitrep",
+    "classFile": "sitrep.ts",
     "description": "The App which controls Rocket.Chat's Status Page."
 }

@@ -6,7 +6,7 @@ import { ServiceStatusEnum } from '../models/enum/service-status-enum';
 import { SettingsEnum } from '../models/enum/settings-enum';
 import { IncidentService } from '../service/incident-service';
 import { ServiceService } from '../service/service-service';
-import { Sitcom } from '../sitcom';
+import { Sitrep } from '../sitrep';
 
 export class IncidentCommand implements ISlashCommand {
     public command = 'incident';
@@ -15,11 +15,11 @@ export class IncidentCommand implements ISlashCommand {
     public permission = 'view-logs';
     public providesPreview = false;
 
-    private app: Sitcom;
+    private app: Sitrep;
     private incidentService: IncidentService;
     private serviceService: ServiceService;
 
-    constructor(app: Sitcom, incidentService: IncidentService, serviceService: ServiceService) {
+    constructor(app: Sitrep, incidentService: IncidentService, serviceService: ServiceService) {
         this.app = app;
         this.incidentService = incidentService;
         this.serviceService = serviceService;
