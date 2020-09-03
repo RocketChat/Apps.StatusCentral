@@ -285,8 +285,8 @@ export class IncidentCreateView {
 
         if (incident.status == IncidentStatusEnum.ScheduledMaintenance) {
             incident = incident.withMaintenance(IncidentMaintenance.create()
-                .withStart(Number(data['vinc_schedule_start_input']['vinc_schedule_start_input_value']))
-                .withEnd(Number(data['vinc_schedule_end_input']['vinc_schedule_end_input_value'])))
+                .withStart(new Date(data['vinc_schedule_start_input']['vinc_schedule_start_input_value'] * 1000))
+                .withEnd(new Date(data['vinc_schedule_end_input']['vinc_schedule_end_input_value'] * 1000)))
                 .withServices(data['vinc_services_multi']['vinc_services_multi_select'].map((index) => this.state.services[index - 1]));
         } else {
             incident = incident.withServices(data['vinc_services_multi']['vinc_services_multi_select'].map((index) => { 

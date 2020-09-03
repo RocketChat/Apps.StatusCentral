@@ -4,15 +4,15 @@ export class IncidentMaintenance {
         return new IncidentMaintenance();
     }
 
-    public start: number;
-    public end: number;
+    public start: Date;
+    public end: Date;
 
-    public withStart(value: number): IncidentMaintenance {
+    public withStart(value: Date): IncidentMaintenance {
         this.start = value;
         return this;
     }
 
-    public withEnd(value: number): IncidentMaintenance {
+    public withEnd(value: Date): IncidentMaintenance {
         this.end = value;
         return this;
     }
