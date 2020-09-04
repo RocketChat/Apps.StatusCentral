@@ -1,6 +1,7 @@
 {
     "extends": "tslint:recommended",
     "rules": {
+      "no-angle-bracket-type-assertion": false,
       "array-type": [true, "generic"],
       "member-access": true,
       "no-console": [false],
@@ -11,5 +12,10 @@
           "limit": 160,
           "ignore-pattern": "^import | *export .*? {"
       }]
-    }
+    },
+    "linterOptions": {
+      "exclude": [
+          "node_modules"
+      ]
+  }
   }

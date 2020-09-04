@@ -1,6 +1,10 @@
 {
+    "scripts": {
+        "lint": "tslint -c tslint.json */*.ts"
+    },
     "devDependencies": {
-        "@rocket.chat/apps-engine": "^1.4.1",
+        "@rocket.chat/apps-engine": "^1.16.0",
+        "@types/node": "^14.6.0",
         "tslint": "^5.11.0",
         "typescript": "^2.9.1"
     }
